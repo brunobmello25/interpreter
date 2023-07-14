@@ -1,14 +1,14 @@
 use crate::token::Token;
 
-pub struct Lexer {
-    input: String,
+pub struct Lexer<'a> {
+    input: &'a String,
     position: usize,
     reading_position: usize,
     ch: char,
 }
 
-impl Lexer {
-    pub fn new(input: String) -> Self {
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a String) -> Self {
         let mut lexer = Lexer {
             input,
             position: 0,
@@ -244,7 +244,7 @@ mod tests {
             Token::EOF,
         ];
 
-        let mut lexer = Lexer::new(input);
+        let mut lexer = Lexer::new(&input);
 
         for expected_token in expected_tokens {
             let token = lexer.next_token();
