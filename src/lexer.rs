@@ -25,8 +25,6 @@ impl Lexer {
         self.skip_whitespace();
 
         let token = match self.ch {
-            '=' => Token::Assign,
-            '+' => Token::Plus,
             ',' => Token::Comma,
             '(' => Token::LParen,
             ')' => Token::RParen,
@@ -34,16 +32,43 @@ impl Lexer {
             '}' => Token::RBrace,
             ';' => Token::Semicolon,
             '\0' => Token::EOF,
+            '!' => {
+                if self.peek_char() == '=' {
+                    self.read_char();
+                    Token::NotEq
+                } else {
+                    Token::Bang
+                }
+            }
+            '=' => {
+                if self.peek_char() == '=' {
+                    self.read_char();
+                    Token::Eq
+                } else {
+                    Token::Assign
+                }
+            }
+            '*' => Token::Asterisk,
+            '/' => Token::Slash,
+            '+' => Token::Plus,
+            '-' => Token::Minus,
+            '<' => Token::LT,
+            '>' => Token::GT,
             '0'..='9' => {
                 return Token::Integer(self.read_number());
             }
             'a'..='z' | 'A'..='Z' | '_' => {
-                let identifier = self.read_identifier();
+                let word = self.read_word();
 
-                let token = match identifier.as_str() {
+                let token = match word.as_str() {
                     "let" => Token::Let,
                     "fn" => Token::Function,
-                    _ => Token::Identifier(identifier),
+                    "true" => Token::True,
+                    "false" => Token::False,
+                    "if" => Token::If,
+                    "else" => Token::Else,
+                    "return" => Token::Return,
+                    _ => Token::Identifier(word),
                 };
 
                 return token;
@@ -53,6 +78,13 @@ impl Lexer {
 
         self.read_char();
         return token;
+    }
+
+    fn peek_char(&self) -> char {
+        match self.input.chars().nth(self.reading_position) {
+            Some(c) => c,
+            None => '\0',
+        }
     }
 
     fn read_char(&mut self) {
@@ -66,7 +98,7 @@ impl Lexer {
         self.reading_position += 1;
     }
 
-    fn read_identifier(&mut self) -> String {
+    fn read_word(&mut self) -> String {
         let initial_pos = self.position;
 
         while self.is_letter(self.ch) {
@@ -74,11 +106,6 @@ impl Lexer {
         }
 
         let result = self.input[initial_pos..self.position].to_string();
-
-        println!(
-            "Finished reading identifier. read '{}'. next char will be '{}'",
-            result, self.ch
-        );
 
         return result;
     }
@@ -94,11 +121,6 @@ impl Lexer {
             .to_string()
             .parse()
             .expect("failed to parse integer");
-
-        println!(
-            "Finished reading identifier. read '{}'. next char will be '{}'",
-            result, self.ch
-        );
 
         return result;
     }
@@ -125,58 +147,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_next_token_word() {
-        let input = String::from("let");
-        let expected_tokens = vec![Token::Let];
-
-        let mut lexer = Lexer::new(input);
-
-        for expected_token in expected_tokens {
-            let token = lexer.next_token();
-
-            assert_eq!(token, expected_token);
-        }
-    }
-
-    #[test]
-    fn test_next_token_with_space() {
-        let input = String::from("let    let");
-        let expected_tokens = vec![Token::Let, Token::Let];
-
-        let mut lexer = Lexer::new(input);
-
-        for expected_token in expected_tokens {
-            let token = lexer.next_token();
-
-            assert_eq!(token, expected_token);
-        }
-    }
-
-    #[test]
-    fn test_next_token_read_number() {
-        let input = String::from("5 10 15");
-        let expected_tokens = vec![Token::Integer(5), Token::Integer(10), Token::Integer(15)];
-
-        let mut lexer = Lexer::new(input);
-
-        for expected_token in expected_tokens {
-            let token = lexer.next_token();
-
-            assert_eq!(token, expected_token);
-        }
-    }
-
-    #[test]
     fn test_next_token() {
         let input = String::from(indoc! {"
             let five = 5;
             let ten = 10;
-    
             let add = fn(x, y) {
                 x + y;
             };
-    
             let result = add(five, ten);
+            !-/*5;
+            5 < 10 > 5;
+            if (5 < 10) {
+                return true;
+            } else {
+                return false;
+            }
+
+            10 == 10;
+            10 != 9;
         "});
 
         let expected_tokens = vec![
@@ -215,6 +203,43 @@ mod tests {
             Token::Comma,
             Token::Identifier(String::from("ten")),
             Token::RParen,
+            Token::Semicolon,
+            Token::Bang,
+            Token::Minus,
+            Token::Slash,
+            Token::Asterisk,
+            Token::Integer(5),
+            Token::Semicolon,
+            Token::Integer(5),
+            Token::LT,
+            Token::Integer(10),
+            Token::GT,
+            Token::Integer(5),
+            Token::Semicolon,
+            Token::If,
+            Token::LParen,
+            Token::Integer(5),
+            Token::LT,
+            Token::Integer(10),
+            Token::RParen,
+            Token::LBrace,
+            Token::Return,
+            Token::True,
+            Token::Semicolon,
+            Token::RBrace,
+            Token::Else,
+            Token::LBrace,
+            Token::Return,
+            Token::False,
+            Token::Semicolon,
+            Token::RBrace,
+            Token::Integer(10),
+            Token::Eq,
+            Token::Integer(10),
+            Token::Semicolon,
+            Token::Integer(10),
+            Token::NotEq,
+            Token::Integer(9),
             Token::Semicolon,
             Token::EOF,
         ];
