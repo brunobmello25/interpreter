@@ -153,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn test_read_number() {
+    fn test_next_token_read_number() {
         let input = String::from("5 10 15");
         let expected_tokens = vec![Token::Integer(5), Token::Integer(10), Token::Integer(15)];
 
