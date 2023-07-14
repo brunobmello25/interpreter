@@ -8,8 +8,6 @@ const PROMPT: &'static str = ">> ";
 
 impl Repl {
     pub fn start(stdin: Stdin) {
-        println!("Monkey repl! enter empty string to exit");
-
         let mut line = String::new();
 
         Self::read_input(&mut line, &stdin);
