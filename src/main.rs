@@ -1,5 +1,6 @@
 use repl::Repl;
 
+mod ast;
 mod lexer;
 mod repl;
 mod token;
