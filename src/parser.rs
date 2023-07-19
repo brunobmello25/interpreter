@@ -5,12 +5,15 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct ParserError;
+pub struct ParserError {
+    msg: String,
+}
 
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
     current_token: Token,
     peeking_token: Token,
+    errors: Vec<ParserError>,
 }
 
 impl<'a> Parser<'a> {
@@ -22,6 +25,7 @@ impl<'a> Parser<'a> {
             lexer,
             current_token,
             peeking_token,
+            errors: vec![],
         };
 
         parser
@@ -83,8 +87,18 @@ impl<'a> Parser<'a> {
             self.next_token();
             return true;
         } else {
+            self.peek_error(&token);
             return false;
         }
+    }
+
+    fn peek_error(&mut self, expected_token: &Token) {
+        let msg = format!(
+            "expected next token to be {}, got {}",
+            expected_token.token_literal(),
+            self.peeking_token.token_literal()
+        );
+        self.errors.push(ParserError { msg });
     }
 }
 
@@ -166,8 +180,9 @@ mod tests {
             },
         ];
 
-        assert_eq!(program.statements.len(), expected_statements.len());
+        assert_eq!(parser.errors.len(), 0, "parser has errors");
 
+        assert_eq!(program.statements.len(), expected_statements.len());
         for (statement, expected_statement) in program.statements.iter().zip(&expected_statements) {
             if let Statement::Let(s) = statement {
                 assert_eq!(s, expected_statement);
@@ -175,5 +190,23 @@ mod tests {
                 panic!("expected let statement");
             }
         }
+    }
+
+    #[test]
+    fn test_peek_error() {
+        let input = String::from(indoc! {"
+            let x 5;
+            let y = 10;
+            let foobar = 838383;
+        "});
+        let lexer = Lexer::new(&input);
+        let mut parser = Parser::new(lexer);
+        parser.parse_program().expect("failed to parse program");
+
+        assert_eq!(parser.errors.len(), 1, "parser should have one error");
+        assert_eq!(
+            parser.errors[0].msg,
+            "expected next token to be assign, got integer"
+        )
     }
 }
