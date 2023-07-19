@@ -55,16 +55,17 @@ impl<'a> Parser<'a> {
             Token::Identifier(ref identifier) => identifier.clone(),
             _ => return None,
         };
-        self.next_token();
 
-        match self.peeking_token {
-            Token::Assign => {}
-            _ => return None,
+        if !self.expect_peek(Token::Identifier(identifier.clone())) {
+            return None;
         }
-        self.next_token();
+
+        if !self.expect_peek(Token::Assign) {
+            return None;
+        }
 
         // TODO: parse expression here
-        while self.peeking_token != Token::Semicolon {
+        while self.peeking_token != Token::Semicolon && self.peeking_token != Token::EOF {
             self.next_token();
         }
 
@@ -75,6 +76,15 @@ impl<'a> Parser<'a> {
         // set current_token to peeking_token and advance peeking_token to lexer.next_token
         let next = self.lexer.next_token();
         self.current_token = std::mem::replace(&mut self.peeking_token, next);
+    }
+
+    fn expect_peek(&mut self, token: Token) -> bool {
+        if self.peeking_token == token {
+            self.next_token();
+            return true;
+        } else {
+            return false;
+        }
     }
 }
 
