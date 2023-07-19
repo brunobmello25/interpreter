@@ -147,6 +147,39 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_next_token_empty() {
+        let input = String::from("");
+
+        let mut lexer = Lexer::new(&input);
+
+        println!(
+            "pos: {} \nreading: {}",
+            lexer.position, lexer.reading_position
+        );
+        assert_eq!(lexer.next_token(), Token::EOF);
+        println!(
+            "pos: {} \nreading: {}",
+            lexer.position, lexer.reading_position
+        );
+        assert_eq!(lexer.next_token(), Token::EOF);
+        println!(
+            "pos: {} \nreading: {}",
+            lexer.position, lexer.reading_position
+        );
+        assert_eq!(lexer.next_token(), Token::EOF);
+        println!(
+            "pos: {} \nreading: {}",
+            lexer.position, lexer.reading_position
+        );
+        assert_eq!(lexer.next_token(), Token::EOF);
+        println!(
+            "pos: {} \nreading: {}",
+            lexer.position, lexer.reading_position
+        );
+        assert_eq!(lexer.next_token(), Token::EOF);
+    }
+
+    #[test]
     fn test_next_token() {
         let input = String::from(indoc! {"
             let five = 5;
