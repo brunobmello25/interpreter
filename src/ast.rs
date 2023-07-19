@@ -1,14 +1,24 @@
+#[derive(Debug, PartialEq)]
 pub enum Statement {
     Let(LetStatement),
     Return(ReturnStatement),
 }
 
-pub struct LetStatement {}
+#[derive(Debug, PartialEq)]
+pub struct LetStatement {
+    pub identifier: String,
+    // TODO:
+    // pub value: Expression,
+}
 
+#[derive(Debug, PartialEq)]
 pub struct ReturnStatement {}
 
+#[derive(Debug, PartialEq)]
+pub struct Expression {}
+
 pub struct Program {
-    statements: Vec<Statement>,
+    pub statements: Vec<Statement>,
 }
 
 impl Program {

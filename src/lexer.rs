@@ -152,30 +152,10 @@ mod tests {
 
         let mut lexer = Lexer::new(&input);
 
-        println!(
-            "pos: {} \nreading: {}",
-            lexer.position, lexer.reading_position
-        );
         assert_eq!(lexer.next_token(), Token::EOF);
-        println!(
-            "pos: {} \nreading: {}",
-            lexer.position, lexer.reading_position
-        );
         assert_eq!(lexer.next_token(), Token::EOF);
-        println!(
-            "pos: {} \nreading: {}",
-            lexer.position, lexer.reading_position
-        );
         assert_eq!(lexer.next_token(), Token::EOF);
-        println!(
-            "pos: {} \nreading: {}",
-            lexer.position, lexer.reading_position
-        );
         assert_eq!(lexer.next_token(), Token::EOF);
-        println!(
-            "pos: {} \nreading: {}",
-            lexer.position, lexer.reading_position
-        );
         assert_eq!(lexer.next_token(), Token::EOF);
     }
 

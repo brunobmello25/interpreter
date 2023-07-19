@@ -1,4 +1,11 @@
-use crate::{ast::Program, lexer::Lexer, token::Token};
+use crate::{
+    ast::{LetStatement, Program, Statement},
+    lexer::Lexer,
+    token::Token,
+};
+
+#[derive(Debug)]
+pub struct ParserError;
 
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
@@ -20,8 +27,48 @@ impl<'a> Parser<'a> {
         parser
     }
 
-    pub fn parse_program(&mut self) -> Program {
-        todo!()
+    pub fn parse_program(&mut self) -> Result<Program, ParserError> {
+        let mut program = Program::new();
+
+        while self.current_token != Token::EOF {
+            let statement = self.parse_statement();
+
+            if let Some(statement) = statement {
+                program.statements.push(statement);
+            }
+
+            self.next_token();
+        }
+
+        Ok(program)
+    }
+
+    fn parse_statement(&mut self) -> Option<Statement> {
+        match self.current_token {
+            Token::Let => self.parse_let_statement(),
+            _ => None,
+        }
+    }
+
+    fn parse_let_statement(&mut self) -> Option<Statement> {
+        let identifier = match self.peeking_token {
+            Token::Identifier(ref identifier) => identifier.clone(),
+            _ => return None,
+        };
+        self.next_token();
+
+        match self.peeking_token {
+            Token::Assign => {}
+            _ => return None,
+        }
+        self.next_token();
+
+        // TODO: parse expression here
+        while self.peeking_token != Token::Semicolon {
+            self.next_token();
+        }
+
+        Some(Statement::Let(LetStatement { identifier }))
     }
 
     fn next_token(&mut self) {
@@ -33,7 +80,13 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{lexer::Lexer, token::Token};
+    use indoc::indoc;
+
+    use crate::{
+        ast::{LetStatement, Statement},
+        lexer::Lexer,
+        token::Token,
+    };
 
     use super::Parser;
 
@@ -78,5 +131,39 @@ mod tests {
 
         assert_eq!(parser.current_token, Token::EOF);
         assert_eq!(parser.peeking_token, Token::EOF);
+    }
+
+    #[test]
+    fn test_parse_let_statements() {
+        let input = String::from(indoc! {"
+            let x = 5;
+            let y = 10;
+            let foobar = 838383;
+        "});
+        let lexer = Lexer::new(&input);
+        let mut parser = Parser::new(lexer);
+        let program = parser.parse_program().expect("failed to parse program");
+
+        let expected_statements = vec![
+            LetStatement {
+                identifier: "x".to_string(),
+            },
+            LetStatement {
+                identifier: "y".to_string(),
+            },
+            LetStatement {
+                identifier: "foobar".to_string(),
+            },
+        ];
+
+        assert_eq!(program.statements.len(), expected_statements.len());
+
+        for (statement, expected_statement) in program.statements.iter().zip(&expected_statements) {
+            if let Statement::Let(s) = statement {
+                assert_eq!(s, expected_statement);
+            } else {
+                panic!("expected let statement");
+            }
+        }
     }
 }
