@@ -9,6 +9,12 @@ pub struct ParserError {
     msg: String,
 }
 
+impl ParserError {
+    fn new(msg: String) -> Self {
+        ParserError { msg }
+    }
+}
+
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
     current_token: Token,
@@ -68,14 +74,19 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_let_statement(&mut self) -> Option<Statement> {
-        let identifier = match self.peeking_token {
-            Token::Identifier(ref identifier) => identifier.clone(),
-            _ => return None,
-        };
+        self.next_token();
 
-        if !self.expect_peek(Token::Identifier(identifier.clone())) {
-            return None;
-        }
+        // TODO: should use expect peek with token_literal validation here
+        let identifier = match self.current_token {
+            Token::Identifier(ref identifier) => identifier.clone(),
+            _ => {
+                self.errors.push(ParserError::new(format!(
+                    "expected next token to be identifier, got {}",
+                    self.current_token.token_literal()
+                )));
+                return None;
+            }
+        };
 
         if !self.expect_peek(Token::Assign) {
             return None;
@@ -115,7 +126,7 @@ impl<'a> Parser<'a> {
             expected_token.token_literal(),
             self.peeking_token.token_literal()
         );
-        self.errors.push(ParserError { msg });
+        self.errors.push(ParserError::new(msg));
     }
 }
 
@@ -130,6 +141,29 @@ mod tests {
     };
 
     use super::Parser;
+
+    #[test]
+    fn test_parse_error_let_statement() {
+        let input = String::from(indoc! {"
+            let banana banana = 10;
+            let = 10;
+        "});
+        let lexer = Lexer::new(&input);
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program().expect("failed to parse program");
+
+        assert_eq!(program.statements.len(), 0);
+        assert_eq!(parser.errors.len(), 2);
+        assert_eq!(
+            parser.errors[0].msg,
+            "expected next token to be assign, got identifier"
+        );
+        assert_eq!(
+            parser.errors[1].msg,
+            "expected next token to be identifier, got assign"
+        );
+    }
 
     #[test]
     fn test_initial_tokens() {
