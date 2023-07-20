@@ -8,14 +8,34 @@ pub enum Statement {
 pub struct LetStatement {
     pub identifier: String,
     // TODO:
-    // pub value: Expression,
+    pub value: Expression,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ReturnStatement {}
+pub struct ReturnStatement {
+    return_value: Expression,
+}
+
+impl LetStatement {
+    pub fn new(identifier: String, value: Expression) -> Self {
+        LetStatement { identifier, value }
+    }
+}
+
+impl ReturnStatement {
+    pub fn new(return_value: Expression) -> Self {
+        ReturnStatement { return_value }
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub struct Expression {}
+
+impl Expression {
+    pub fn new() -> Self {
+        Expression {}
+    }
+}
 
 pub struct Program {
     pub statements: Vec<Statement>,

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{LetStatement, Program, Statement},
+    ast::{Expression, LetStatement, Program, ReturnStatement, Statement},
     lexer::Lexer,
     token::Token,
 };
@@ -50,8 +50,21 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.current_token {
             Token::Let => self.parse_let_statement(),
+            Token::Return => self.parse_return_statement(),
             _ => None,
         }
+    }
+
+    fn parse_return_statement(&mut self) -> Option<Statement> {
+        self.next_token();
+
+        // TODO: parse expression here
+        // TODO: should fail if reaching EOF before semicolon
+        while self.current_token != Token::Semicolon && self.current_token != Token::EOF {
+            self.next_token();
+        }
+
+        Some(Statement::Return(ReturnStatement::new(Expression::new())))
     }
 
     fn parse_let_statement(&mut self) -> Option<Statement> {
@@ -69,11 +82,15 @@ impl<'a> Parser<'a> {
         }
 
         // TODO: parse expression here
-        while self.peeking_token != Token::Semicolon && self.peeking_token != Token::EOF {
+        // TODO: should fail if reaching EOF before semicolon
+        while self.current_token != Token::Semicolon && self.current_token != Token::EOF {
             self.next_token();
         }
 
-        Some(Statement::Let(LetStatement { identifier }))
+        Some(Statement::Let(LetStatement::new(
+            identifier,
+            Expression::new(),
+        )))
     }
 
     fn next_token(&mut self) {
@@ -107,7 +124,7 @@ mod tests {
     use indoc::indoc;
 
     use crate::{
-        ast::{LetStatement, Statement},
+        ast::{Expression, LetStatement, ReturnStatement, Statement},
         lexer::Lexer,
         token::Token,
     };
@@ -158,6 +175,39 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_return_statements() {
+        let input = String::from(indoc! {"
+            return 5;
+            return 10;
+            return 993322;
+        "});
+
+        let lexer = Lexer::new(&input);
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program().expect("failed to parse program");
+
+        assert_eq!(program.statements.len(), 3);
+
+        let expected_statements = vec![
+            ReturnStatement::new(Expression::new()),
+            ReturnStatement::new(Expression::new()),
+            ReturnStatement::new(Expression::new()),
+        ];
+
+        assert_eq!(parser.errors.len(), 0, "parser has errors");
+
+        assert_eq!(program.statements.len(), expected_statements.len());
+        for (statement, expected_statement) in program.statements.iter().zip(&expected_statements) {
+            if let Statement::Return(s) = statement {
+                assert_eq!(s, expected_statement);
+            } else {
+                panic!("expected return statement");
+            }
+        }
+    }
+
+    #[test]
     fn test_parse_let_statements() {
         let input = String::from(indoc! {"
             let x = 5;
@@ -169,15 +219,9 @@ mod tests {
         let program = parser.parse_program().expect("failed to parse program");
 
         let expected_statements = vec![
-            LetStatement {
-                identifier: "x".to_string(),
-            },
-            LetStatement {
-                identifier: "y".to_string(),
-            },
-            LetStatement {
-                identifier: "foobar".to_string(),
-            },
+            LetStatement::new("x".to_string(), Expression::new()),
+            LetStatement::new("y".to_string(), Expression::new()),
+            LetStatement::new("foobar".to_string(), Expression::new()),
         ];
 
         assert_eq!(parser.errors.len(), 0, "parser has errors");
