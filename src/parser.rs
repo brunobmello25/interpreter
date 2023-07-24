@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, LetStatement, Program, ReturnStatement, Statement},
+    ast::{expression::Expression, program::Program, statement::Statement},
     lexer::Lexer,
     token::Token,
 };
@@ -70,7 +70,10 @@ impl<'a> Parser<'a> {
             self.next_token();
         }
 
-        Some(Statement::Return(ReturnStatement::new(Expression::new())))
+        Some(Statement::r#return(Expression::Identifier(
+            "TODO".to_string(),
+        )))
+        // Some(Statement::Return(ReturnStatement::new(Expression::new())))
     }
 
     fn parse_let_statement(&mut self) -> Option<Statement> {
@@ -98,10 +101,9 @@ impl<'a> Parser<'a> {
             self.next_token();
         }
 
-        Some(Statement::Let(LetStatement::new(
-            identifier,
-            Expression::new(),
-        )))
+        // TODO:
+        // Some(Statement::r#let(identifier))
+        None
     }
 
     fn next_token(&mut self) {
@@ -135,7 +137,7 @@ mod tests {
     use indoc::indoc;
 
     use crate::{
-        ast::{Expression, LetStatement, ReturnStatement, Statement},
+        ast::{expression::Expression, statement::Statement},
         lexer::Lexer,
         token::Token,
     };
@@ -224,19 +226,19 @@ mod tests {
         assert_eq!(program.statements.len(), 3);
 
         let expected_statements = vec![
-            ReturnStatement::new(Expression::new()),
-            ReturnStatement::new(Expression::new()),
-            ReturnStatement::new(Expression::new()),
+            Statement::r#return(Expression::Integer(5)),
+            Statement::r#return(Expression::Integer(10)),
+            Statement::r#return(Expression::Integer(993322)),
         ];
 
         assert_eq!(parser.errors.len(), 0, "parser has errors");
 
         assert_eq!(program.statements.len(), expected_statements.len());
         for (statement, expected_statement) in program.statements.iter().zip(&expected_statements) {
-            if let Statement::Return(s) = statement {
-                assert_eq!(s, expected_statement);
+            if let Statement::Return { value } = statement {
+                assert_eq!(statement, expected_statement);
             } else {
-                panic!("expected return statement");
+                panic!("statement is not a return statement");
             }
         }
     }
@@ -253,19 +255,23 @@ mod tests {
         let program = parser.parse_program().expect("failed to parse program");
 
         let expected_statements = vec![
-            LetStatement::new("x".to_string(), Expression::new()),
-            LetStatement::new("y".to_string(), Expression::new()),
-            LetStatement::new("foobar".to_string(), Expression::new()),
+            Statement::r#let("x", Expression::Integer(5)),
+            Statement::r#let("y", Expression::Integer(10)),
+            Statement::r#let("foobar", Expression::Integer(838383)),
         ];
 
         assert_eq!(parser.errors.len(), 0, "parser has errors");
 
         assert_eq!(program.statements.len(), expected_statements.len());
         for (statement, expected_statement) in program.statements.iter().zip(&expected_statements) {
-            if let Statement::Let(s) = statement {
-                assert_eq!(s, expected_statement);
+            if let Statement::Let {
+                identifier: _,
+                value: _,
+            } = statement
+            {
+                assert_eq!(statement, expected_statement);
             } else {
-                panic!("expected let statement");
+                panic!("statement is not a let statement");
             }
         }
     }
