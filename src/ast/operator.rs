@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum PrefixOperator {
-    Not,
+    Bang,
     Negate,
 }
 
@@ -24,7 +24,7 @@ pub enum InfixOperator {
 impl Display for PrefixOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PrefixOperator::Not => write!(f, "!"),
+            PrefixOperator::Bang => write!(f, "!"),
             PrefixOperator::Negate => write!(f, "-"),
         }
     }
@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn test_prefix_operator_display() {
         use super::PrefixOperator::*;
-        assert_eq!(format!("{}", Not), "!");
+        assert_eq!(format!("{}", Bang), "!");
         assert_eq!(format!("{}", Negate), "-");
     }
 

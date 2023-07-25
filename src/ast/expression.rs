@@ -5,6 +5,8 @@ use super::{
     statement::Statement,
 };
 
+// TODO: remove allow dead_code
+#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 pub enum Expression {
     Prefix {
@@ -60,7 +62,7 @@ impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expression::Prefix { operator, rhs } => write!(f, "{}{}", operator, rhs),
-            Expression::Infix { operator, lhs, rhs } => write!(f, "{}{}{}", lhs, operator, rhs),
+            Expression::Infix { operator, lhs, rhs } => write!(f, "{} {} {}", lhs, operator, rhs),
             Expression::Call {
                 function,
                 arguments,
@@ -71,7 +73,7 @@ impl fmt::Display for Expression {
                     .collect::<Vec<_>>()
                     .join(", ");
 
-                write!(f, "{}{}", function, arguments)
+                write!(f, "{}({})", function, arguments)
             }
             Expression::Identifier(identifier) => write!(f, "{}", identifier),
             Expression::Function { parameters, body } => {
@@ -102,5 +104,74 @@ impl fmt::Display for Expression {
                 write!(f, "[{values}]")
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_display() {
+        assert_eq!(format!("{}", super::Expression::Integer(1)), "1");
+        assert_eq!(format!("{}", super::Expression::Boolean(true)), "true");
+        assert_eq!(
+            format!("{}", super::Expression::String("hello".into())),
+            "hello"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                super::Expression::Array(vec![
+                    super::Expression::Integer(1),
+                    super::Expression::Integer(2),
+                    super::Expression::Integer(3),
+                ])
+            ),
+            "[1, 2, 3]"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                super::Expression::Prefix {
+                    operator: super::PrefixOperator::Bang,
+                    rhs: Box::new(super::Expression::Boolean(true)),
+                }
+            ),
+            "!true"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                super::Expression::Infix {
+                    operator: super::InfixOperator::Add,
+                    lhs: Box::new(super::Expression::Integer(1)),
+                    rhs: Box::new(super::Expression::Integer(2)),
+                }
+            ),
+            "1 + 2"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                super::Expression::Call {
+                    function: Box::new(super::Expression::Identifier("add".into())),
+                    arguments: vec![super::Expression::Integer(1), super::Expression::Integer(2),],
+                }
+            ),
+            "add(1, 2)"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                super::Expression::Function {
+                    parameters: vec!["x".into(), "y".into()],
+                    body: vec![super::Statement::Expression(super::Expression::Infix {
+                        operator: super::InfixOperator::Add,
+                        lhs: Box::new(super::Expression::Identifier("x".into())),
+                        rhs: Box::new(super::Expression::Identifier("y".into())),
+                    })],
+                }
+            ),
+            "fn(x, y) {x + y}"
+        );
     }
 }
