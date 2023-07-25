@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, LetStatement, Program, ReturnStatement, Statement},
+    ast::{program::Program, statement::Statement},
     lexer::Lexer,
     token::Token,
 };
@@ -70,7 +70,7 @@ impl<'a> Parser<'a> {
             self.next_token();
         }
 
-        Some(Statement::Return(ReturnStatement::new(Expression::new())))
+        Some(Statement::Return {})
     }
 
     fn parse_let_statement(&mut self) -> Option<Statement> {
@@ -98,10 +98,7 @@ impl<'a> Parser<'a> {
             self.next_token();
         }
 
-        Some(Statement::Let(LetStatement::new(
-            identifier,
-            Expression::new(),
-        )))
+        Some(Statement::Let { identifier })
     }
 
     fn next_token(&mut self) {
@@ -134,11 +131,7 @@ impl<'a> Parser<'a> {
 mod tests {
     use indoc::indoc;
 
-    use crate::{
-        ast::{Expression, LetStatement, ReturnStatement, Statement},
-        lexer::Lexer,
-        token::Token,
-    };
+    use crate::{ast::statement::Statement, lexer::Lexer, token::Token};
 
     use super::Parser;
 
@@ -222,23 +215,10 @@ mod tests {
         let program = parser.parse_program().expect("failed to parse program");
 
         assert_eq!(program.statements.len(), 3);
-
-        let expected_statements = vec![
-            ReturnStatement::new(Expression::new()),
-            ReturnStatement::new(Expression::new()),
-            ReturnStatement::new(Expression::new()),
-        ];
-
-        assert_eq!(parser.errors.len(), 0, "parser has errors");
-
-        assert_eq!(program.statements.len(), expected_statements.len());
-        for (statement, expected_statement) in program.statements.iter().zip(&expected_statements) {
-            if let Statement::Return(s) = statement {
-                assert_eq!(s, expected_statement);
-            } else {
-                panic!("expected return statement");
-            }
-        }
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements[0], Statement::r#return());
+        assert_eq!(program.statements[1], Statement::r#return());
+        assert_eq!(program.statements[2], Statement::r#return());
     }
 
     #[test]
@@ -252,22 +232,11 @@ mod tests {
         let mut parser = Parser::new(lexer);
         let program = parser.parse_program().expect("failed to parse program");
 
-        let expected_statements = vec![
-            LetStatement::new("x".to_string(), Expression::new()),
-            LetStatement::new("y".to_string(), Expression::new()),
-            LetStatement::new("foobar".to_string(), Expression::new()),
-        ];
-
-        assert_eq!(parser.errors.len(), 0, "parser has errors");
-
-        assert_eq!(program.statements.len(), expected_statements.len());
-        for (statement, expected_statement) in program.statements.iter().zip(&expected_statements) {
-            if let Statement::Let(s) = statement {
-                assert_eq!(s, expected_statement);
-            } else {
-                panic!("expected let statement");
-            }
-        }
+        assert_eq!(program.statements.len(), 3);
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements[0], Statement::r#let("x"),);
+        assert_eq!(program.statements[1], Statement::r#let("y"),);
+        assert_eq!(program.statements[2], Statement::r#let("foobar"),);
     }
 
     #[test]
