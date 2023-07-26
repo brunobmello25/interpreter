@@ -38,6 +38,11 @@ impl Parser {
 
         Ok(program)
     }
+
+    fn next_token(&mut self) {
+        std::mem::swap(&mut self.current_token, &mut self.peeking_token);
+        self.peeking_token = self.lexer.next_token();
+    }
 }
 
 #[cfg(test)]
@@ -74,7 +79,24 @@ mod tests {
     }
 
     #[test]
-    fn test_next_token() {}
+    fn test_next_token() {
+        let mut parser = make_parser("let five = 5;");
+
+        assert_eq!(parser.current_token, Token::Let);
+        assert_eq!(parser.peeking_token, Token::identifier("five"));
+
+        parser.next_token();
+        assert_eq!(parser.current_token, Token::identifier("five"));
+        assert_eq!(parser.peeking_token, Token::Assign);
+
+        parser.next_token();
+        assert_eq!(parser.current_token, Token::Assign);
+        assert_eq!(parser.peeking_token, Token::Integer(5));
+
+        parser.next_token();
+        assert_eq!(parser.current_token, Token::Integer(5));
+        assert_eq!(parser.peeking_token, Token::Semicolon);
+    }
 
     fn make_parser(input: impl Into<String>) -> Parser {
         let input = input.into();

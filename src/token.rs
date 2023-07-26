@@ -30,6 +30,10 @@ pub enum Token {
 }
 
 impl Token {
+    pub fn identifier(ident: impl Into<String>) -> Token {
+        Token::Identifier(ident.into())
+    }
+
     pub fn token_literal(&self) -> &str {
         match self {
             Token::Let => "let",
