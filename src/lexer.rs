@@ -1,16 +1,16 @@
 use crate::token::Token;
 
-pub struct Lexer<'a> {
-    input: &'a String,
+pub struct Lexer {
+    input: String,
     position: usize,
     reading_position: usize,
     ch: char,
 }
 
-impl<'a> Lexer<'a> {
-    pub fn new(input: &'a String) -> Self {
+impl Lexer {
+    pub fn new(input: impl Into<String>) -> Self {
         let mut lexer = Lexer {
-            input,
+            input: input.into(),
             position: 0,
             reading_position: 0,
             ch: '\0',
