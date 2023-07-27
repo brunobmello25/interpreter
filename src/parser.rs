@@ -34,6 +34,7 @@ impl Parser {
         while self.current_token != Token::EOF {
             let stmt = match self.current_token {
                 Token::Let => self.parse_let_statement(),
+                Token::Return => self.parse_return_statement(),
                 _ => todo!(),
             };
 
@@ -71,7 +72,7 @@ impl Parser {
         self.next_token();
 
         // TODO: parse expression here
-        while self.current_token != Token::Semicolon {
+        while self.current_token != Token::Semicolon && self.current_token != Token::EOF {
             self.next_token();
         }
 
@@ -79,6 +80,19 @@ impl Parser {
             token: let_token,
             name: identifier,
         })
+    }
+
+    fn parse_return_statement(&mut self) -> Result<Statement, ParserError> {
+        let return_token = self.current_token.clone();
+
+        self.next_token();
+
+        // TODO: parse expressions here
+        while self.current_token != Token::Semicolon && self.current_token != Token::EOF {
+            self.next_token();
+        }
+
+        Ok(Statement::r#return(return_token))
     }
 
     fn next_token(&mut self) {
@@ -178,6 +192,22 @@ mod tests {
             program.statements[2],
             Statement::r#let(Token::Let, "banana")
         );
+    }
+
+    #[test]
+    fn test_parse_return_statement() {
+        let mut parser = make_parser(indoc! {"
+            return banana;
+            return 69 + 420;
+        "});
+
+        let program = parser.parse_program();
+
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(parser.errors.len(), 0);
+
+        assert_eq!(program.statements[0], Statement::r#return(Token::Return));
+        assert_eq!(program.statements[1], Statement::r#return(Token::Return));
     }
 
     fn make_parser(input: impl Into<String>) -> Parser {

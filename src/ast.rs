@@ -24,7 +24,7 @@ pub enum Statement {
     },
     Return {
         token: Token,
-        value: Expression,
+        // value: Expression,
     },
 }
 
@@ -42,6 +42,10 @@ impl Statement {
             name: name.into(),
             // value,
         }
+    }
+
+    pub fn r#return(token: Token) -> Self {
+        Statement::Return { token }
     }
 }
 
