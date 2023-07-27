@@ -206,6 +206,7 @@ mod tests {
         assert_eq!(program.statements.len(), 2);
         assert_eq!(parser.errors.len(), 0);
 
+        // TODO: assert that the statement expressions are correct
         assert_eq!(program.statements[0], Statement::r#return(Token::Return));
         assert_eq!(program.statements[1], Statement::r#return(Token::Return));
     }
