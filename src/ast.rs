@@ -1,6 +1,6 @@
 use crate::token::Token;
 
-#[allow(dead_code)]
+#[derive(Debug)]
 enum Node {
     Statement(Statement),
     Expression(Expression),
@@ -10,17 +10,17 @@ impl Node {
     fn token_literal(&self) -> String {
         match self {
             Node::Statement(stmt) => stmt.token_literal(),
-            Node::Expression(_) => todo!(),
+            Node::Expression(exp) => exp.token_literal(),
         }
     }
 }
 
-#[allow(dead_code)]
+#[derive(PartialEq, Debug)]
 pub enum Statement {
     Let {
         token: Token,
         name: String,
-        value: Expression,
+        // value: Expression,
     },
     Return {
         token: Token,
@@ -35,12 +35,59 @@ impl Statement {
             Statement::Return { token, .. } => token.token_literal(),
         }
     }
+
+    pub fn r#let(token: Token, name: impl Into<String>) -> Self {
+        Statement::Let {
+            token,
+            name: name.into(),
+            // value,
+        }
+    }
 }
 
-#[allow(dead_code)]
-pub enum Expression {}
+#[derive(PartialEq, Debug)]
+enum Operator {}
 
-impl Expression {}
+#[derive(PartialEq, Debug)]
+pub enum Expression {
+    Infix {
+        lhs: Box<Expression>,
+        operator: Operator,
+        rhs: Box<Expression>,
+    },
+    Prefix {
+        operator: Operator,
+        rhs: Box<Expression>,
+    },
+    Call {
+        function_name: String,
+        arguments: Vec<Expression>,
+    },
+    Identifier {
+        identifier: String,
+    },
+    Function {
+        arguments: Vec<Expression>,
+        body: Vec<Statement>,
+    },
+    If {
+        condition: Box<Expression>,
+    },
+}
+
+impl Expression {
+    fn token_literal(&self) -> String {
+        match self {
+            _ => todo!(),
+        }
+    }
+
+    pub fn identifier(identifier: impl Into<String>) -> Self {
+        Expression::Identifier {
+            identifier: identifier.into(),
+        }
+    }
+}
 
 pub struct Program {
     pub statements: Vec<Statement>,

@@ -1,14 +1,10 @@
-use crate::{ast::Program, lexer::Lexer, token::Token};
+use crate::{
+    ast::{Program, Statement},
+    lexer::Lexer,
+    token::Token,
+};
 
-pub struct ParserError {
-    msg: String,
-}
-
-impl ParserError {
-    fn new(msg: impl Into<String>) -> Self {
-        ParserError { msg: msg.into() }
-    }
-}
+pub struct ParserError {}
 
 pub struct Parser {
     lexer: Lexer,
@@ -32,10 +28,57 @@ impl Parser {
         parser
     }
 
-    pub fn parse_program(&mut self) -> Result<Program, ParserError> {
+    pub fn parse_program(&mut self) -> Program {
         let mut program = Program::new();
 
-        Ok(program)
+        while self.current_token != Token::EOF {
+            let stmt = match self.current_token {
+                Token::Let => self.parse_let_statement(),
+                _ => todo!(),
+            };
+
+            match stmt {
+                Ok(stmt) => program.statements.push(stmt),
+                Err(err) => self.errors.push(err),
+            }
+
+            self.advance_tokens();
+        }
+
+        program
+    }
+
+    fn advance_tokens(&mut self) {
+        while self.current_token != Token::Semicolon && self.current_token != Token::EOF {
+            self.next_token();
+        }
+
+        if self.current_token == Token::Semicolon {
+            self.next_token();
+        }
+    }
+
+    fn parse_let_statement(&mut self) -> Result<Statement, ParserError> {
+        let let_token = self.current_token.clone();
+
+        self.next_token();
+
+        let identifier = match &self.current_token {
+            Token::Identifier(identifier) => identifier.clone(),
+            _ => return Err(ParserError {}),
+        };
+
+        self.next_token();
+
+        // TODO: parse expression here
+        while self.current_token != Token::Semicolon {
+            self.next_token();
+        }
+
+        Ok(Statement::Let {
+            token: let_token,
+            name: identifier,
+        })
     }
 
     fn next_token(&mut self) {
@@ -46,7 +89,13 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use crate::{lexer::Lexer, token::Token};
+    use indoc::indoc;
+
+    use crate::{
+        ast::{Expression, Statement},
+        lexer::Lexer,
+        token::Token,
+    };
 
     use super::Parser;
 
@@ -95,6 +144,40 @@ mod tests {
         parser.next_token();
         assert_eq!(parser.current_token, Token::Integer(5));
         assert_eq!(parser.peeking_token, Token::Semicolon);
+    }
+
+    #[test]
+    fn test_parse_single_let_statement() {
+        let mut parser = make_parser("let x = banana;");
+
+        let program = parser.parse_program();
+
+        assert_eq!(program.statements.len(), 1);
+        assert_eq!(parser.errors.len(), 0);
+
+        assert_eq!(program.statements[0], Statement::r#let(Token::Let, "x"))
+    }
+
+    #[test]
+    fn test_parse_let_statement() {
+        let mut parser = make_parser(indoc! {"
+            let x = 5;
+            let y = 10;
+            let banana = 123456;
+        "});
+
+        let program = parser.parse_program();
+
+        assert_eq!(program.statements.len(), 3);
+        assert_eq!(parser.errors.len(), 0);
+
+        //TODO: assert that the statement expressions are correct
+        assert_eq!(program.statements[0], Statement::r#let(Token::Let, "x"));
+        assert_eq!(program.statements[1], Statement::r#let(Token::Let, "y"));
+        assert_eq!(
+            program.statements[2],
+            Statement::r#let(Token::Let, "banana")
+        );
     }
 
     fn make_parser(input: impl Into<String>) -> Parser {
