@@ -1,6 +1,5 @@
-use crate::{ast::program::Program, lexer::Lexer, token::Token};
+use crate::{ast::Program, lexer::Lexer, token::Token};
 
-#[derive(Debug)]
 pub struct ParserError {
     msg: String,
 }
