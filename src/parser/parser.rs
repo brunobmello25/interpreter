@@ -1,6 +1,7 @@
 use crate::{
-    ast::{Program, Statement},
+    ast::{expression::Expression, program::Program, statement::Statement},
     lexer::Lexer,
+    parser::precedence::Precedence,
     token::Token,
 };
 
@@ -35,7 +36,7 @@ impl Parser {
             let stmt = match self.current_token {
                 Token::Let => self.parse_let_statement(),
                 Token::Return => self.parse_return_statement(),
-                _ => todo!(),
+                _ => self.parse_expression_statement(),
             };
 
             match stmt {
@@ -49,6 +50,22 @@ impl Parser {
         program
     }
 
+    fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
+        let expression = self.parse_expression(Precedence::LOWEST)?;
+
+        if self.peeking_token == Token::Semicolon {
+            self.next_token();
+        };
+
+        Ok(Statement::expression(expression))
+    }
+
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserError> {
+        let prefix = self.parse_prefix()?;
+
+        Ok(prefix)
+    }
+
     fn advance_tokens(&mut self) {
         while self.current_token != Token::Semicolon && self.current_token != Token::EOF {
             self.next_token();
@@ -57,6 +74,15 @@ impl Parser {
         if self.current_token == Token::Semicolon {
             self.next_token();
         }
+    }
+
+    fn parse_prefix(&self) -> Result<Expression, ParserError> {
+        let expression = match &self.current_token {
+            Token::Identifier(identifier) => Expression::identifier(identifier),
+            _ => todo!(),
+        };
+
+        Ok(expression)
     }
 
     fn parse_let_statement(&mut self) -> Result<Statement, ParserError> {
@@ -76,10 +102,7 @@ impl Parser {
             self.next_token();
         }
 
-        Ok(Statement::Let {
-            token: let_token,
-            name: identifier,
-        })
+        Ok(Statement::Let { name: identifier })
     }
 
     fn parse_return_statement(&mut self) -> Result<Statement, ParserError> {
@@ -106,7 +129,7 @@ mod tests {
     use indoc::indoc;
 
     use crate::{
-        ast::{Expression, Statement},
+        ast::{expression::Expression, statement::Statement},
         lexer::Lexer,
         token::Token,
     };
@@ -209,6 +232,26 @@ mod tests {
         // TODO: assert that the statement expressions are correct
         assert_eq!(program.statements[0], Statement::r#return(Token::Return));
         assert_eq!(program.statements[1], Statement::r#return(Token::Return));
+    }
+
+    #[test]
+    fn test_identifier_expression() {
+        let mut parser = make_parser(indoc! {"
+            banana;
+            apple;
+        "});
+        let program = parser.parse_program();
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(
+            program.statements[0],
+            Statement::expression(Expression::identifier("banana"))
+        );
+        assert_eq!(
+            program.statements[1],
+            Statement::expression(Expression::identifier("apple"))
+        );
     }
 
     fn make_parser(input: impl Into<String>) -> Parser {
