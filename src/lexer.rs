@@ -110,19 +110,14 @@ impl Lexer {
         return result;
     }
 
-    fn read_number(&mut self) -> usize {
+    fn read_number(&mut self) -> String {
         let initial_pos = self.position;
 
         while self.is_number(self.ch) {
             self.read_char();
         }
 
-        let result = self.input[initial_pos..self.position]
-            .to_string()
-            .parse()
-            .expect("failed to parse integer");
-
-        return result;
+        self.input[initial_pos..self.position].to_string()
     }
 
     fn is_letter(&self, ch: char) -> bool {
@@ -184,12 +179,12 @@ mod tests {
             Token::Let,
             Token::Identifier(String::from("five")),
             Token::Assign,
-            Token::Integer(5),
+            Token::integer("5"),
             Token::Semicolon,
             Token::Let,
             Token::Identifier(String::from("ten")),
             Token::Assign,
-            Token::Integer(10),
+            Token::integer("10"),
             Token::Semicolon,
             Token::Let,
             Token::Identifier(String::from("add")),
@@ -221,19 +216,19 @@ mod tests {
             Token::Minus,
             Token::Slash,
             Token::Asterisk,
-            Token::Integer(5),
+            Token::integer("5"),
             Token::Semicolon,
-            Token::Integer(5),
+            Token::integer("5"),
             Token::LT,
-            Token::Integer(10),
+            Token::integer("10"),
             Token::GT,
-            Token::Integer(5),
+            Token::integer("5"),
             Token::Semicolon,
             Token::If,
             Token::LParen,
-            Token::Integer(5),
+            Token::integer("5"),
             Token::LT,
-            Token::Integer(10),
+            Token::integer("10"),
             Token::RParen,
             Token::LBrace,
             Token::Return,
@@ -246,13 +241,13 @@ mod tests {
             Token::False,
             Token::Semicolon,
             Token::RBrace,
-            Token::Integer(10),
+            Token::integer("10"),
             Token::Eq,
-            Token::Integer(10),
+            Token::integer("10"),
             Token::Semicolon,
-            Token::Integer(10),
+            Token::integer("10"),
             Token::NotEq,
-            Token::Integer(9),
+            Token::integer("9"),
             Token::Semicolon,
             Token::EOF,
         ];

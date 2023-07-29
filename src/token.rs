@@ -3,7 +3,7 @@ pub enum Token {
     Let,
     Identifier(String),
     Assign,
-    Integer(usize),
+    Integer(String),
     Comma,
     Function,
     LParen,
@@ -68,6 +68,10 @@ impl Token {
         Token::Identifier(ident.into())
     }
 
+    pub fn integer(integer: impl Into<String>) -> Token {
+        Token::Integer(integer.into())
+    }
+
     pub fn token_literal(&self) -> String {
         let result = match self {
             Token::Let => "let".to_string(),
@@ -112,7 +116,7 @@ mod tests {
         assert_eq!(Token::Let.token_literal(), "let");
         assert_eq!(Token::Identifier("a".to_string()).token_literal(), "a");
         assert_eq!(Token::Assign.token_literal(), "=");
-        assert_eq!(Token::Integer(1).token_literal(), "1");
+        assert_eq!(Token::Integer("1".to_string()).token_literal(), "1");
         assert_eq!(Token::Comma.token_literal(), ",");
         assert_eq!(Token::Function.token_literal(), "fn");
         assert_eq!(Token::LParen.token_literal(), "(");

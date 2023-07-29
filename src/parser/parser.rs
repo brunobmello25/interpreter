@@ -77,12 +77,14 @@ impl Parser {
     }
 
     fn parse_prefix(&self) -> Result<Expression, ParserError> {
-        let expression = match &self.current_token {
-            Token::Identifier(identifier) => Expression::identifier(identifier),
+        match &self.current_token {
+            Token::Identifier(identifier) => Ok(Expression::identifier(identifier)),
+            Token::Integer(integer_literal) => integer_literal
+                .parse()
+                .map(Expression::Int)
+                .map_err(|_| ParserError {}),
             _ => todo!(),
-        };
-
-        Ok(expression)
+        }
     }
 
     fn parse_let_statement(&mut self) -> Result<Statement, ParserError> {
@@ -176,10 +178,10 @@ mod tests {
 
         parser.next_token();
         assert_eq!(parser.current_token, Token::Assign);
-        assert_eq!(parser.peeking_token, Token::Integer(5));
+        assert_eq!(parser.peeking_token, Token::integer("5"));
 
         parser.next_token();
-        assert_eq!(parser.current_token, Token::Integer(5));
+        assert_eq!(parser.current_token, Token::integer("5"));
         assert_eq!(parser.peeking_token, Token::Semicolon);
     }
 
@@ -251,6 +253,26 @@ mod tests {
         assert_eq!(
             program.statements[1],
             Statement::expression(Expression::identifier("apple"))
+        );
+    }
+
+    #[test]
+    fn test_integer_literal_expression() {
+        let mut parser = make_parser(indoc! {"
+            123;
+            456;
+        "});
+        let program = parser.parse_program();
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(
+            program.statements[0],
+            Statement::expression(Expression::Int(123))
+        );
+        assert_eq!(
+            program.statements[1],
+            Statement::expression(Expression::Int(456))
         );
     }
 
