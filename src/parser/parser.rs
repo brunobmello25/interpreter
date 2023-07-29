@@ -1,5 +1,7 @@
 use crate::{
-    ast::{expression::Expression, program::Program, statement::Statement},
+    ast::{
+        expression::Expression, operator::PrefixOperator, program::Program, statement::Statement,
+    },
     lexer::Lexer,
     parser::precedence::Precedence,
     token::Token,
@@ -76,15 +78,34 @@ impl Parser {
         }
     }
 
-    fn parse_prefix(&self) -> Result<Expression, ParserError> {
+    fn parse_prefix(&mut self) -> Result<Expression, ParserError> {
         match &self.current_token {
             Token::Identifier(identifier) => Ok(Expression::identifier(identifier)),
-            Token::Integer(integer_literal) => integer_literal
-                .parse()
-                .map(Expression::Int)
-                .map_err(|_| ParserError {}),
+            Token::Integer(integer_literal) => self.parse_integer(integer_literal),
+            Token::Bang | Token::Minus => self.parse_prefix_expression(),
             _ => todo!(),
         }
+    }
+
+    fn parse_prefix_expression(&mut self) -> Result<Expression, ParserError> {
+        let operator = match &self.current_token {
+            Token::Bang => PrefixOperator::Not,
+            Token::Minus => PrefixOperator::Negative,
+            _ => return Err(ParserError {}),
+        };
+
+        self.next_token();
+
+        self.parse_expression(Precedence::PREFIX)
+            .map(|expression| Expression::prefix(expression, operator))
+            .map_err(|_| ParserError {})
+    }
+
+    fn parse_integer(&self, literal: &String) -> Result<Expression, ParserError> {
+        literal
+            .parse()
+            .map(Expression::Int)
+            .map_err(|_| ParserError {})
     }
 
     fn parse_let_statement(&mut self) -> Result<Statement, ParserError> {
@@ -131,7 +152,7 @@ mod tests {
     use indoc::indoc;
 
     use crate::{
-        ast::{expression::Expression, statement::Statement},
+        ast::{expression::Expression, operator::PrefixOperator, statement::Statement},
         lexer::Lexer,
         token::Token,
     };
@@ -273,6 +294,29 @@ mod tests {
         assert_eq!(
             program.statements[1],
             Statement::expression(Expression::Int(456))
+        );
+    }
+
+    #[test]
+    fn test_prefix_operators() {
+        let mut parser = make_parser(indoc! {"
+            !5;
+            -15;
+        "});
+        let program = parser.parse_program();
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(
+            program.statements[0],
+            Statement::expression(Expression::prefix(Expression::Int(5), PrefixOperator::Not))
+        );
+        assert_eq!(
+            program.statements[1],
+            Statement::expression(Expression::prefix(
+                Expression::Int(15),
+                PrefixOperator::Negative
+            ))
         );
     }
 

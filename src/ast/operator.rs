@@ -1,7 +1,7 @@
 #[derive(PartialEq, Debug)]
 pub enum PrefixOperator {
     Not,
-    Neg,
+    Negative,
 }
 
 #[derive(PartialEq, Debug)]

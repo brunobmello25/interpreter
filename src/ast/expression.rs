@@ -51,4 +51,11 @@ impl Expression {
     pub fn identifier(identifier: impl Into<String>) -> Self {
         Expression::Identifier(identifier.into())
     }
+
+    pub fn prefix(rhs: Expression, operator: PrefixOperator) -> Self {
+        Expression::Prefix {
+            rhs: Box::new(rhs),
+            operator,
+        }
+    }
 }
