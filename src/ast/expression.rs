@@ -42,18 +42,20 @@ pub enum Expression {
 }
 
 impl Expression {
-    fn token_literal(&self) -> String {
-        match self {
-            _ => todo!(),
-        }
-    }
-
     pub fn identifier(identifier: impl Into<String>) -> Self {
         Expression::Identifier(identifier.into())
     }
 
     pub fn prefix(rhs: Expression, operator: PrefixOperator) -> Self {
         Expression::Prefix {
+            rhs: Box::new(rhs),
+            operator,
+        }
+    }
+
+    pub fn infix(lhs: Expression, rhs: Expression, operator: InfixOperator) -> Self {
+        Expression::Infix {
+            lhs: Box::new(lhs),
             rhs: Box::new(rhs),
             operator,
         }

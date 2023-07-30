@@ -1,6 +1,9 @@
 use crate::{
     ast::{
-        expression::Expression, operator::PrefixOperator, program::Program, statement::Statement,
+        expression::Expression,
+        operator::{InfixOperator, PrefixOperator},
+        program::Program,
+        statement::Statement,
     },
     lexer::Lexer,
     parser::precedence::Precedence,
@@ -63,9 +66,17 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserError> {
-        let prefix = self.parse_prefix()?;
+        let mut lhs = self.parse_prefix()?;
 
-        Ok(prefix)
+        while self.peeking_token != Token::Semicolon
+            && precedence < Precedence::from(&self.peeking_token)
+        {
+            self.next_token();
+
+            lhs = self.parse_infix_expression(lhs)?;
+        }
+
+        Ok(lhs)
     }
 
     fn advance_tokens(&mut self) {
@@ -83,7 +94,10 @@ impl Parser {
             Token::Identifier(identifier) => Ok(Expression::identifier(identifier)),
             Token::Integer(integer_literal) => self.parse_integer(integer_literal),
             Token::Bang | Token::Minus => self.parse_prefix_expression(),
-            _ => todo!(),
+            x => {
+                println!("{:?}", x);
+                todo!();
+            }
         }
     }
 
@@ -99,6 +113,20 @@ impl Parser {
         self.parse_expression(Precedence::PREFIX)
             .map(|expression| Expression::prefix(expression, operator))
             .map_err(|_| ParserError {})
+    }
+
+    fn parse_infix_expression(&mut self, lhs: Expression) -> Result<Expression, ParserError> {
+        let precedence = Precedence::from(&self.current_token);
+        let operator = InfixOperator::from(&self.current_token);
+
+        self.next_token();
+
+        let rhs = self.parse_expression(precedence);
+
+        match rhs {
+            Ok(rhs) => Ok(Expression::infix(lhs, rhs, operator)),
+            Err(_) => Err(ParserError {}),
+        }
     }
 
     fn parse_integer(&self, literal: &String) -> Result<Expression, ParserError> {
@@ -152,12 +180,83 @@ mod tests {
     use indoc::indoc;
 
     use crate::{
-        ast::{expression::Expression, operator::PrefixOperator, statement::Statement},
+        ast::{
+            expression::Expression,
+            operator::{InfixOperator, PrefixOperator},
+            statement::Statement,
+        },
         lexer::Lexer,
         token::Token,
     };
 
     use super::Parser;
+
+    #[test]
+    fn test_parsing_infix_expressions_with_integers() {
+        let mut parser = make_parser(indoc! {"
+            5 + 5;
+            5 - 5;
+            5 * 5;
+            5 / 5;
+            5 > 5;
+            5 < 5;
+            5 == 5;
+            5 != 5;
+        "});
+        let program = parser.parse_program();
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 8);
+
+        macro_rules! infix_assert {
+            ($index:expr, $op:expr) => {
+                assert_eq!(
+                    program.statements[$index],
+                    Statement::expression(Expression::infix(
+                        Expression::Int(5),
+                        Expression::Int(5),
+                        $op,
+                    ))
+                )
+            };
+        }
+        infix_assert!(0, InfixOperator::Add);
+        infix_assert!(1, InfixOperator::Sub);
+        infix_assert!(2, InfixOperator::Mult);
+        infix_assert!(3, InfixOperator::Div);
+        infix_assert!(4, InfixOperator::GreaterThan);
+        infix_assert!(5, InfixOperator::LessThan);
+        infix_assert!(6, InfixOperator::Equal);
+        infix_assert!(7, InfixOperator::NotEqual);
+    }
+
+    #[test]
+    fn test_parsing_infix_with_multiple_expressions() {
+        let mut parser = make_parser(indoc! {"
+            5 + 7 * 10;
+            1 - 2 + 3;
+        "});
+        let program = parser.parse_program();
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::infix(
+                Expression::Int(5),
+                Expression::infix(Expression::Int(7), Expression::Int(10), InfixOperator::Mult),
+                InfixOperator::Add
+            ))
+        );
+        assert_eq!(
+            program.statements[1],
+            Statement::Expression(Expression::infix(
+                Expression::infix(Expression::Int(1), Expression::Int(2), InfixOperator::Sub),
+                Expression::Int(3),
+                InfixOperator::Add
+            ))
+        );
+    }
 
     #[test]
     fn test_new_with_empty_input() {
