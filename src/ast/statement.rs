@@ -36,9 +36,9 @@ impl Statement {
 impl Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
-            Statement::Let { name } => write!(f, "let {} = ;", name),
-            Statement::Return {} => write!(f, "return ;"),
-            Statement::Expression(expression) => write!(f, "{};", expression),
+            Statement::Let { name } => write!(f, "let {} = ", name),
+            Statement::Return {} => write!(f, "return "),
+            Statement::Expression(expression) => write!(f, "{}", expression),
         }
     }
 }

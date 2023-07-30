@@ -93,6 +93,7 @@ impl Parser {
         match &self.current_token {
             Token::Identifier(identifier) => Ok(Expression::identifier(identifier)),
             Token::Integer(integer_literal) => self.parse_integer(integer_literal),
+            Token::True | Token::False => self.parse_boolean(),
             Token::Bang | Token::Minus => self.parse_prefix_expression(),
             _ => Err(ParserError {}),
         }
@@ -123,6 +124,14 @@ impl Parser {
         match rhs {
             Ok(rhs) => Ok(Expression::infix(lhs, rhs, operator)),
             Err(_) => Err(ParserError {}),
+        }
+    }
+
+    fn parse_boolean(&self) -> Result<Expression, ParserError> {
+        match &self.current_token {
+            Token::True => Ok(Expression::Bool(true)),
+            Token::False => Ok(Expression::Bool(false)),
+            _ => Err(ParserError {}),
         }
     }
 
@@ -435,21 +444,25 @@ mod tests {
     #[test]
     fn test_precedences() {
         let tests = vec![
-            ("-a * b", "((-a) * b);"),
-            ("!-a", "(!(-a));"),
-            ("a + b + c", "((a + b) + c);"),
-            ("a + b - c", "((a + b) - c);"),
-            ("a * b * c", "((a * b) * c);"),
-            ("a * b / c", "((a * b) / c);"),
-            ("a + b / c", "(a + (b / c));"),
-            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f);"),
-            ("3 + 4; -5 * 5", "(3 + 4);\n((-5) * 5);"),
-            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4));"),
-            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4));"),
+            ("-a * b", "((-a) * b)"),
+            ("!-a", "(!(-a))"),
+            ("a + b + c", "((a + b) + c)"),
+            ("a + b - c", "((a + b) - c)"),
+            ("a * b * c", "((a * b) * c)"),
+            ("a * b / c", "((a * b) / c)"),
+            ("a + b / c", "(a + (b / c))"),
+            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+            ("3 + 4; -5 * 5", "(3 + 4)\n((-5) * 5)"),
+            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
             (
                 "3 + 4 * 5 == 3 * 1 + 4 * 5",
-                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)));",
+                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
             ),
+            ("true", "true"),
+            ("false", "false"),
+            ("3 > 5 == false", "((3 > 5) == false)"),
+            ("3 < 5 == true", "((3 < 5) == true)"),
         ];
 
         for test in tests {

@@ -173,7 +173,7 @@ mod tests {
             consequence: vec![Statement::Expression(Expression::Int(1))],
             alternative: Some(vec![Statement::Expression(Expression::Int(2))]),
         };
-        assert_eq!(format!("{}", condition), "if true { 1; } else { 2; }");
+        assert_eq!(format!("{}", condition), "if true { 1 } else { 2 }");
     }
 
     #[test]
@@ -182,7 +182,7 @@ mod tests {
             parameters: vec![Expression::identifier("foo")],
             body: vec![Statement::Expression(Expression::Int(1))],
         };
-        assert_eq!(format!("{}", function), "fn(foo) { 1; }");
+        assert_eq!(format!("{}", function), "fn(foo) { 1 }");
     }
 
     #[test]
