@@ -431,4 +431,32 @@ mod tests {
         let parser = Parser::new(lexer);
         return parser;
     }
+
+    #[test]
+    fn test_precedences() {
+        let tests = vec![
+            ("-a * b", "((-a) * b);"),
+            ("!-a", "(!(-a));"),
+            ("a + b + c", "((a + b) + c);"),
+            ("a + b - c", "((a + b) - c);"),
+            ("a * b * c", "((a * b) * c);"),
+            ("a * b / c", "((a * b) / c);"),
+            ("a + b / c", "(a + (b / c));"),
+            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f);"),
+            ("3 + 4; -5 * 5", "(3 + 4);\n((-5) * 5);"),
+            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4));"),
+            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4));"),
+            (
+                "3 + 4 * 5 == 3 * 1 + 4 * 5",
+                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)));",
+            ),
+        ];
+
+        for test in tests {
+            let mut parser = make_parser(test.0);
+            let program = parser.parse_program();
+            assert_eq!(parser.errors.len(), 0);
+            assert_eq!(program.to_string().trim(), test.1);
+        }
+    }
 }

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::{
     operator::{InfixOperator, PrefixOperator},
     statement::Statement,
@@ -59,5 +61,136 @@ impl Expression {
             rhs: Box::new(rhs),
             operator,
         }
+    }
+}
+
+impl Display for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            Expression::Infix { lhs, operator, rhs } => write!(f, "({} {} {})", lhs, operator, rhs),
+            Expression::Prefix { operator, rhs } => write!(f, "({}{})", operator, rhs),
+            Expression::Bool(b) => write!(f, "{}", b),
+            Expression::Int(i) => write!(f, "{}", i),
+            Expression::Identifier(identifier) => write!(f, "{}", identifier),
+            Expression::String(str) => write!(f, "\"{}\"", str),
+            Expression::Condition {
+                condition,
+                consequence,
+                alternative,
+            } => write!(
+                f,
+                "if {} {{ {} }} else {{ {} }}",
+                condition,
+                consequence
+                    .iter()
+                    .map(|s| format!("{}", s))
+                    .collect::<Vec<String>>()
+                    .join(" "),
+                alternative
+                    .as_ref()
+                    .map(|s| {
+                        s.iter()
+                            .map(|s| format!("{}", s))
+                            .collect::<Vec<String>>()
+                            .join(" ")
+                    })
+                    .unwrap_or_else(|| "".to_string())
+            ),
+            Expression::Function { parameters, body } => write!(
+                f,
+                "fn({}) {{ {} }}",
+                parameters
+                    .iter()
+                    .map(|p| format!("{}", p))
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                body.iter()
+                    .map(|s| format!("{}", s))
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            ),
+            Expression::Call {
+                function,
+                arguments,
+            } => write!(
+                f,
+                "{}({})",
+                function,
+                arguments
+                    .iter()
+                    .map(|a| format!("{}", a))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_infix() {
+        let infix = Expression::infix(Expression::Int(1), Expression::Int(2), InfixOperator::Add);
+        assert_eq!(format!("{}", infix), "(1 + 2)");
+    }
+
+    #[test]
+    fn test_prefix() {
+        let prefix = Expression::prefix(Expression::Int(1), PrefixOperator::Negative);
+        assert_eq!(format!("{}", prefix), "(-1)");
+    }
+
+    #[test]
+    fn test_bool() {
+        let bool_expr = Expression::Bool(true);
+        assert_eq!(format!("{}", bool_expr), "true");
+    }
+
+    #[test]
+    fn test_int() {
+        let int_expr = Expression::Int(1);
+        assert_eq!(format!("{}", int_expr), "1");
+    }
+
+    #[test]
+    fn test_identifier() {
+        let identifier_expr = Expression::identifier("foo");
+        assert_eq!(format!("{}", identifier_expr), "foo");
+    }
+
+    #[test]
+    fn test_string() {
+        let string_expr = Expression::String("foo".to_string());
+        assert_eq!(format!("{}", string_expr), "\"foo\"");
+    }
+
+    #[test]
+    fn test_condition() {
+        let condition = Expression::Condition {
+            condition: Box::new(Expression::Bool(true)),
+            consequence: vec![Statement::Expression(Expression::Int(1))],
+            alternative: Some(vec![Statement::Expression(Expression::Int(2))]),
+        };
+        assert_eq!(format!("{}", condition), "if true { 1; } else { 2; }");
+    }
+
+    #[test]
+    fn test_function() {
+        let function = Expression::Function {
+            parameters: vec![Expression::identifier("foo")],
+            body: vec![Statement::Expression(Expression::Int(1))],
+        };
+        assert_eq!(format!("{}", function), "fn(foo) { 1; }");
+    }
+
+    #[test]
+    fn test_call() {
+        let call = Expression::Call {
+            function: Box::new(Expression::identifier("foo")),
+            arguments: vec![Expression::Int(1)],
+        };
+        assert_eq!(format!("{}", call), "foo(1)");
     }
 }

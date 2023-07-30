@@ -22,7 +22,7 @@ impl From<&Token> for Precedence {
             Token::Asterisk => Precedence::PRODUCT,
             Token::GT => Precedence::LESSGREATER,
             Token::LT => Precedence::LESSGREATER,
-            _ => todo!(),
+            _ => Precedence::LOWEST,
         }
     }
 }
