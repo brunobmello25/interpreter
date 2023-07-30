@@ -73,7 +73,7 @@ impl Parser {
         {
             self.next_token();
 
-            lhs = self.parse_infix_expression(lhs)?;
+            lhs = self.parse_infix(lhs)?;
         }
 
         Ok(lhs)
@@ -94,10 +94,7 @@ impl Parser {
             Token::Identifier(identifier) => Ok(Expression::identifier(identifier)),
             Token::Integer(integer_literal) => self.parse_integer(integer_literal),
             Token::Bang | Token::Minus => self.parse_prefix_expression(),
-            x => {
-                println!("{:?}", x);
-                todo!();
-            }
+            _ => Err(ParserError {}),
         }
     }
 
@@ -115,7 +112,7 @@ impl Parser {
             .map_err(|_| ParserError {})
     }
 
-    fn parse_infix_expression(&mut self, lhs: Expression) -> Result<Expression, ParserError> {
+    fn parse_infix(&mut self, lhs: Expression) -> Result<Expression, ParserError> {
         let precedence = Precedence::from(&self.current_token);
         let operator = InfixOperator::from(&self.current_token);
 
@@ -235,11 +232,12 @@ mod tests {
         let mut parser = make_parser(indoc! {"
             5 + 7 * 10;
             1 - 2 + 3;
+            5 * 7 + 10;
         "});
         let program = parser.parse_program();
 
         assert_eq!(parser.errors.len(), 0);
-        assert_eq!(program.statements.len(), 2);
+        assert_eq!(program.statements.len(), 3);
         assert_eq!(
             program.statements[0],
             Statement::Expression(Expression::infix(
@@ -253,6 +251,14 @@ mod tests {
             Statement::Expression(Expression::infix(
                 Expression::infix(Expression::Int(1), Expression::Int(2), InfixOperator::Sub),
                 Expression::Int(3),
+                InfixOperator::Add
+            ))
+        );
+        assert_eq!(
+            program.statements[2],
+            Statement::Expression(Expression::infix(
+                Expression::infix(Expression::Int(5), Expression::Int(7), InfixOperator::Mult),
+                Expression::Int(10),
                 InfixOperator::Add
             ))
         );
