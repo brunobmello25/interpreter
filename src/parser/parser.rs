@@ -93,10 +93,25 @@ impl Parser {
         match &self.current_token {
             Token::Identifier(identifier) => Ok(Expression::identifier(identifier)),
             Token::Integer(integer_literal) => self.parse_integer(integer_literal),
+            Token::LParen => self.parse_grouped_expression(),
             Token::True | Token::False => self.parse_boolean(),
             Token::Bang | Token::Minus => self.parse_prefix_expression(),
             _ => Err(ParserError {}),
         }
+    }
+
+    fn parse_grouped_expression(&mut self) -> Result<Expression, ParserError> {
+        self.next_token();
+
+        let expression = self.parse_expression(Precedence::LOWEST);
+
+        if self.peeking_token != Token::RParen {
+            return Err(ParserError {});
+        }
+
+        self.next_token();
+
+        expression
     }
 
     fn parse_prefix_expression(&mut self) -> Result<Expression, ParserError> {
@@ -463,6 +478,11 @@ mod tests {
             ("false", "false"),
             ("3 > 5 == false", "((3 > 5) == false)"),
             ("3 < 5 == true", "((3 < 5) == true)"),
+            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+            ("(5 + 5) * 2", "((5 + 5) * 2)"),
+            ("2 / (5 + 5)", "(2 / (5 + 5))"),
+            ("-(5 + 5)", "(-(5 + 5))"),
+            ("!(true == true)", "(!(true == true))"),
         ];
 
         for test in tests {
