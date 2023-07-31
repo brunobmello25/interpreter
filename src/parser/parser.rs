@@ -38,11 +38,7 @@ impl Parser {
         let mut program = Program::new();
 
         while self.current_token != Token::EOF {
-            let stmt = match self.current_token {
-                Token::Let => self.parse_let_statement(),
-                Token::Return => self.parse_return_statement(),
-                _ => self.parse_expression_statement(),
-            };
+            let stmt = self.parse_statement();
 
             match stmt {
                 Ok(stmt) => program.statements.push(stmt),
@@ -53,6 +49,14 @@ impl Parser {
         }
 
         program
+    }
+
+    fn parse_statement(&mut self) -> Result<Statement, ParserError> {
+        match self.current_token {
+            Token::Let => self.parse_let_statement(),
+            Token::Return => self.parse_return_statement(),
+            _ => self.parse_expression_statement(),
+        }
     }
 
     fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
@@ -96,8 +100,73 @@ impl Parser {
             Token::LParen => self.parse_grouped_expression(),
             Token::True | Token::False => self.parse_boolean(),
             Token::Bang | Token::Minus => self.parse_prefix_expression(),
+            Token::If => self.parse_if_expression(),
             _ => Err(ParserError {}),
         }
+    }
+
+    fn parse_if_expression(&mut self) -> Result<Expression, ParserError> {
+        // TODO: replace with macro
+        match self.peeking_token {
+            Token::LParen => {
+                self.next_token();
+                Ok(())
+            }
+            _ => Err(ParserError {}),
+        }?;
+
+        self.next_token();
+
+        let condition = self.parse_expression(Precedence::LOWEST)?;
+
+        match self.peeking_token {
+            Token::RParen => {
+                self.next_token();
+                Ok(())
+            }
+            _ => Err(ParserError {}),
+        }?;
+
+        match self.peeking_token {
+            Token::LBrace => {
+                self.next_token();
+                Ok(())
+            }
+            _ => Err(ParserError {}),
+        }?;
+
+        let consequence = self.parse_block_statement()?;
+        let mut alternative: Option<Vec<Statement>> = None;
+
+        if self.peeking_token == Token::Else {
+            self.next_token();
+
+            match self.peeking_token {
+                Token::LBrace => {
+                    self.next_token();
+                    Ok(())
+                }
+                _ => Err(ParserError {}),
+            }?;
+
+            alternative = Some(self.parse_block_statement()?);
+        }
+
+        Ok(Expression::r#if(condition, consequence, alternative))
+    }
+
+    fn parse_block_statement(&mut self) -> Result<Vec<Statement>, ParserError> {
+        self.next_token();
+
+        let mut statements = vec![];
+
+        while self.current_token != Token::RBrace && self.current_token != Token::EOF {
+            let statement = self.parse_statement()?;
+            statements.push(statement);
+            self.next_token();
+        }
+
+        Ok(statements)
     }
 
     fn parse_grouped_expression(&mut self) -> Result<Expression, ParserError> {
@@ -336,15 +405,51 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_single_let_statement() {
-        let mut parser = make_parser("let x = banana;");
-
+    fn test_if_expression() {
+        let mut parser = make_parser(indoc! {"
+            if (x < y) { x }
+        "});
         let program = parser.parse_program();
 
-        assert_eq!(program.statements.len(), 1);
         assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
 
-        assert_eq!(program.statements[0], Statement::r#let(Token::Let, "x"))
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::r#if(
+                Expression::infix(
+                    Expression::identifier("x"),
+                    Expression::identifier("y"),
+                    InfixOperator::LessThan,
+                ),
+                vec![Statement::Expression(Expression::identifier("x"))],
+                None
+            ))
+        )
+    }
+
+    #[test]
+    fn test_if_else_expression() {
+        let mut parser = make_parser(indoc! {"
+            if (x < y) { x } else { y }
+        "});
+        let program = parser.parse_program();
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::r#if(
+                Expression::infix(
+                    Expression::identifier("x"),
+                    Expression::identifier("y"),
+                    InfixOperator::LessThan,
+                ),
+                vec![Statement::Expression(Expression::identifier("x"))],
+                Some(vec![Statement::Expression(Expression::identifier("y"))])
+            ))
+        )
     }
 
     #[test]

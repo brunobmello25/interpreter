@@ -12,7 +12,7 @@ pub enum Expression {
     Bool(bool),
     Identifier(String),
     String(String),
-    Condition {
+    If {
         condition: Box<Expression>,
         consequence: Vec<Statement>,
         alternative: Option<Vec<Statement>>,
@@ -62,6 +62,18 @@ impl Expression {
             operator,
         }
     }
+
+    pub fn r#if(
+        condition: Expression,
+        consequence: Vec<Statement>,
+        alternative: Option<Vec<Statement>>,
+    ) -> Self {
+        Expression::If {
+            condition: Box::new(condition),
+            consequence,
+            alternative,
+        }
+    }
 }
 
 impl Display for Expression {
@@ -73,7 +85,7 @@ impl Display for Expression {
             Expression::Int(i) => write!(f, "{}", i),
             Expression::Identifier(identifier) => write!(f, "{}", identifier),
             Expression::String(str) => write!(f, "\"{}\"", str),
-            Expression::Condition {
+            Expression::If {
                 condition,
                 consequence,
                 alternative,
@@ -168,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_condition() {
-        let condition = Expression::Condition {
+        let condition = Expression::If {
             condition: Box::new(Expression::Bool(true)),
             consequence: vec![Statement::Expression(Expression::Int(1))],
             alternative: Some(vec![Statement::Expression(Expression::Int(2))]),
