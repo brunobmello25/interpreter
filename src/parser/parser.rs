@@ -5,6 +5,7 @@ use crate::{
         program::Program,
         statement::Statement,
     },
+    expect_peek,
     lexer::Lexer,
     parser::precedence::Precedence,
     token::Token,
@@ -106,48 +107,24 @@ impl Parser {
     }
 
     fn parse_if_expression(&mut self) -> Result<Expression, ParserError> {
-        // TODO: replace with macro
-        match self.peeking_token {
-            Token::LParen => {
-                self.next_token();
-                Ok(())
-            }
-            _ => Err(ParserError {}),
-        }?;
+        expect_peek!(self, LParen)?;
 
         self.next_token();
 
         let condition = self.parse_expression(Precedence::LOWEST)?;
 
-        match self.peeking_token {
-            Token::RParen => {
-                self.next_token();
-                Ok(())
-            }
-            _ => Err(ParserError {}),
-        }?;
+        expect_peek!(self, RParen)?;
 
-        match self.peeking_token {
-            Token::LBrace => {
-                self.next_token();
-                Ok(())
-            }
-            _ => Err(ParserError {}),
-        }?;
+        expect_peek!(self, LBrace)?;
 
         let consequence = self.parse_block_statement()?;
+
         let mut alternative: Option<Vec<Statement>> = None;
 
         if self.peeking_token == Token::Else {
             self.next_token();
 
-            match self.peeking_token {
-                Token::LBrace => {
-                    self.next_token();
-                    Ok(())
-                }
-                _ => Err(ParserError {}),
-            }?;
+            expect_peek!(self, LBrace)?;
 
             alternative = Some(self.parse_block_statement()?);
         }
@@ -174,11 +151,7 @@ impl Parser {
 
         let expression = self.parse_expression(Precedence::LOWEST);
 
-        if self.peeking_token != Token::RParen {
-            return Err(ParserError {});
-        }
-
-        self.next_token();
+        expect_peek!(self, RParen)?;
 
         expression
     }
