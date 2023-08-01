@@ -102,8 +102,50 @@ impl Parser {
             Token::True | Token::False => self.parse_boolean(),
             Token::Bang | Token::Minus => self.parse_prefix_expression(),
             Token::If => self.parse_if_expression(),
+            Token::Function => self.parse_function_literal(),
             _ => Err(ParserError {}),
         }
+    }
+
+    fn parse_function_literal(&mut self) -> Result<Expression, ParserError> {
+        println!("a");
+        expect_peek!(self, LParen)?;
+
+        println!("b");
+        let parameters = self.parse_function_params()?;
+
+        println!("c");
+        expect_peek!(self, LBrace)?;
+
+        println!("d");
+        // TODO:
+        let body = self.parse_block_statement()?;
+        // let body = vec![];
+
+        println!("e");
+        Ok(Expression::function(parameters, body))
+    }
+
+    fn parse_function_params(&mut self) -> Result<Vec<Expression>, ParserError> {
+        let mut params = vec![];
+
+        if self.peeking_token == Token::RParen {
+            self.next_token();
+            return Ok(params);
+        }
+
+        self.next_token();
+
+        while let Token::Identifier(identifier) = &self.current_token {
+            params.push(Expression::identifier(identifier));
+
+            self.next_token();
+            if let Token::Comma = self.current_token {
+                self.next_token();
+            }
+        }
+
+        Ok(params)
     }
 
     fn parse_if_expression(&mut self) -> Result<Expression, ParserError> {
@@ -253,6 +295,31 @@ mod tests {
     };
 
     use super::Parser;
+
+    #[test]
+    fn test_function_literal_parsing() {
+        let mut parser = make_parser(indoc! {"
+            fn(x, y) {
+                x + y;
+            }
+        "});
+        let program = parser.parse_program();
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::function(
+                vec![Expression::identifier("x"), Expression::identifier("y")],
+                vec![Statement::expression(Expression::infix(
+                    Expression::identifier("x"),
+                    Expression::identifier("y"),
+                    InfixOperator::Add,
+                ))]
+            ))
+        );
+    }
 
     #[test]
     fn test_parsing_infix_expressions_with_integers() {

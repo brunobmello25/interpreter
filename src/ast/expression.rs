@@ -48,6 +48,10 @@ impl Expression {
         Expression::Identifier(identifier.into())
     }
 
+    pub fn function(parameters: Vec<Expression>, body: Vec<Statement>) -> Self {
+        Expression::Function { parameters, body }
+    }
+
     pub fn prefix(rhs: Expression, operator: PrefixOperator) -> Self {
         Expression::Prefix {
             rhs: Box::new(rhs),
