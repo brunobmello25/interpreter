@@ -78,6 +78,13 @@ impl Expression {
             alternative,
         }
     }
+
+    pub fn call(function: Expression, arguments: Vec<Expression>) -> Self {
+        Expression::Call {
+            function: Box::new(function),
+            arguments,
+        }
+    }
 }
 
 impl Display for Expression {

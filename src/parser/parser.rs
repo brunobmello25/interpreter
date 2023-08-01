@@ -73,6 +73,16 @@ impl Parser {
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserError> {
         let mut lhs = self.parse_prefix()?;
 
+        println!("lhs = {:?}", lhs);
+        println!("current token = {:?}", self.current_token);
+        println!("peeking token = {:?}", self.peeking_token);
+        println!("precedence = {:?}", precedence);
+        println!(
+            "token precedence = {:?}. Greater than precedence? {:?}",
+            Precedence::from(&self.peeking_token),
+            Precedence::from(&self.peeking_token) > precedence
+        );
+
         while self.peeking_token != Token::Semicolon
             && precedence < Precedence::from(&self.peeking_token)
         {
@@ -107,22 +117,46 @@ impl Parser {
         }
     }
 
+    fn parse_call_expression(&mut self, function: Expression) -> Result<Expression, ParserError> {
+        let arguments = self.parse_call_arguments()?;
+        Ok(Expression::Call {
+            function: Box::new(function),
+            arguments,
+        })
+    }
+
+    fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParserError> {
+        let mut arguments = vec![];
+
+        if self.peeking_token == Token::RParen {
+            self.next_token();
+            return Ok(arguments);
+        }
+
+        self.next_token();
+
+        arguments.push(self.parse_expression(Precedence::LOWEST)?);
+
+        while self.peeking_token == Token::Comma {
+            self.next_token();
+            self.next_token();
+            arguments.push(self.parse_expression(Precedence::LOWEST)?);
+        }
+
+        expect_peek!(self, RParen)?;
+
+        Ok(arguments)
+    }
+
     fn parse_function_literal(&mut self) -> Result<Expression, ParserError> {
-        println!("a");
         expect_peek!(self, LParen)?;
 
-        println!("b");
         let parameters = self.parse_function_params()?;
 
-        println!("c");
         expect_peek!(self, LBrace)?;
 
-        println!("d");
-        // TODO:
         let body = self.parse_block_statement()?;
-        // let body = vec![];
 
-        println!("e");
         Ok(Expression::function(parameters, body))
     }
 
@@ -214,7 +248,19 @@ impl Parser {
 
     fn parse_infix(&mut self, lhs: Expression) -> Result<Expression, ParserError> {
         let precedence = Precedence::from(&self.current_token);
-        let operator = InfixOperator::from(&self.current_token);
+
+        let operator = match &self.current_token {
+            Token::Eq => InfixOperator::Equal,
+            Token::NotEq => InfixOperator::NotEqual,
+            Token::Plus => InfixOperator::Add,
+            Token::Minus => InfixOperator::Sub,
+            Token::Asterisk => InfixOperator::Mult,
+            Token::Slash => InfixOperator::Div,
+            Token::GT => InfixOperator::GreaterThan,
+            Token::LT => InfixOperator::LessThan,
+            Token::LParen => return self.parse_call_expression(lhs),
+            _ => return Err(ParserError {}),
+        };
 
         self.next_token();
 
@@ -295,6 +341,27 @@ mod tests {
     };
 
     use super::Parser;
+
+    #[test]
+    fn test_call_expression_parsing() {
+        let mut parser = make_parser("add(1, 2 * 3, 4 + 5, 6 / 2);");
+        let program = parser.parse_program();
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::call(
+                Expression::identifier("add"),
+                vec![
+                    Expression::Int(1),
+                    Expression::infix(Expression::Int(2), Expression::Int(3), InfixOperator::Mult),
+                    Expression::infix(Expression::Int(4), Expression::Int(5), InfixOperator::Add),
+                    Expression::infix(Expression::Int(6), Expression::Int(2), InfixOperator::Div)
+                ]
+            ))
+        )
+    }
 
     #[test]
     fn test_function_literal_parsing() {
