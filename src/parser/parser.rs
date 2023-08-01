@@ -288,8 +288,6 @@ impl Parser {
     }
 
     fn parse_let_statement(&mut self) -> Result<Statement, ParserError> {
-        let let_token = self.current_token.clone();
-
         self.next_token();
 
         let identifier = match &self.current_token {
@@ -297,27 +295,21 @@ impl Parser {
             _ => return Err(ParserError {}),
         };
 
+        expect_peek!(self, Assign)?;
+
         self.next_token();
 
-        // TODO: parse expression here
-        while self.current_token != Token::Semicolon && self.current_token != Token::EOF {
-            self.next_token();
-        }
+        let expression = self.parse_expression(Precedence::LOWEST)?;
 
-        Ok(Statement::Let { name: identifier })
+        Ok(Statement::r#let(identifier, expression))
     }
 
     fn parse_return_statement(&mut self) -> Result<Statement, ParserError> {
-        let return_token = self.current_token.clone();
-
         self.next_token();
 
-        // TODO: parse expressions here
-        while self.current_token != Token::Semicolon && self.current_token != Token::EOF {
-            self.next_token();
-        }
+        let expression = self.parse_expression(Precedence::LOWEST)?;
 
-        Ok(Statement::r#return(return_token))
+        Ok(Statement::r#return(expression))
     }
 
     fn next_token(&mut self) {
@@ -569,15 +561,20 @@ mod tests {
 
         let program = parser.parse_program();
 
-        assert_eq!(program.statements.len(), 3);
         assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 3);
 
-        //TODO: assert that the statement expressions are correct
-        assert_eq!(program.statements[0], Statement::r#let(Token::Let, "x"));
-        assert_eq!(program.statements[1], Statement::r#let(Token::Let, "y"));
+        assert_eq!(
+            program.statements[0],
+            Statement::r#let("x", Expression::Int(5))
+        );
+        assert_eq!(
+            program.statements[1],
+            Statement::r#let("y", Expression::Int(10))
+        );
         assert_eq!(
             program.statements[2],
-            Statement::r#let(Token::Let, "banana")
+            Statement::r#let("banana", Expression::Int(123456))
         );
     }
 
@@ -593,9 +590,18 @@ mod tests {
         assert_eq!(program.statements.len(), 2);
         assert_eq!(parser.errors.len(), 0);
 
-        // TODO: assert that the statement expressions are correct
-        assert_eq!(program.statements[0], Statement::r#return(Token::Return));
-        assert_eq!(program.statements[1], Statement::r#return(Token::Return));
+        assert_eq!(
+            program.statements[0],
+            Statement::r#return(Expression::identifier("banana"))
+        );
+        assert_eq!(
+            program.statements[1],
+            Statement::r#return(Expression::infix(
+                Expression::Int(69),
+                Expression::Int(420),
+                InfixOperator::Add
+            ))
+        );
     }
 
     #[test]

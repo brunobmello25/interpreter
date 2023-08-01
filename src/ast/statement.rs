@@ -6,26 +6,21 @@ use super::expression::Expression;
 
 #[derive(PartialEq, Debug)]
 pub enum Statement {
-    Let {
-        name: String,
-        // value: Expression,
-    },
-    Return {
-        // value: Expression,
-    },
+    Let { name: String, value: Expression },
+    Return { value: Expression },
     Expression(Expression),
 }
 
 impl Statement {
-    pub fn r#let(token: Token, name: impl Into<String>) -> Self {
+    pub fn r#let(name: impl Into<String>, value: Expression) -> Self {
         Statement::Let {
             name: name.into(),
-            // value,
+            value,
         }
     }
 
-    pub fn r#return(token: Token) -> Self {
-        Statement::Return {}
+    pub fn r#return(value: Expression) -> Self {
+        Statement::Return { value }
     }
 
     pub fn expression(expression: Expression) -> Self {
@@ -36,8 +31,8 @@ impl Statement {
 impl Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
-            Statement::Let { name } => write!(f, "let {} = ", name),
-            Statement::Return {} => write!(f, "return "),
+            Statement::Let { name, value } => write!(f, "let {} = {}", name, value),
+            Statement::Return { value } => write!(f, "return value"),
             Statement::Expression(expression) => write!(f, "{}", expression),
         }
     }

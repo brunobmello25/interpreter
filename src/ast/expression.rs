@@ -34,13 +34,6 @@ pub enum Expression {
         operator: InfixOperator,
         rhs: Box<Expression>,
     },
-    // Index {
-    //     lhs: Expression,
-    //     idx: Expression
-    // }
-    // Array(Vec<Expression>),
-    // Map(Vec<(Expression, Expression)>),
-    // TODO: map, array, index
 }
 
 impl Expression {
