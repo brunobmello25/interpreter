@@ -17,7 +17,7 @@ pub struct Parser {
     lexer: Lexer,
     current_token: Token,
     peeking_token: Token,
-    errors: Vec<ParserError>,
+    pub errors: Vec<ParserError>,
 }
 
 impl Parser {
@@ -72,16 +72,6 @@ impl Parser {
 
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserError> {
         let mut lhs = self.parse_prefix()?;
-
-        println!("lhs = {:?}", lhs);
-        println!("current token = {:?}", self.current_token);
-        println!("peeking token = {:?}", self.peeking_token);
-        println!("precedence = {:?}", precedence);
-        println!(
-            "token precedence = {:?}. Greater than precedence? {:?}",
-            Precedence::from(&self.peeking_token),
-            Precedence::from(&self.peeking_token) > precedence
-        );
 
         while self.peeking_token != Token::Semicolon
             && precedence < Precedence::from(&self.peeking_token)

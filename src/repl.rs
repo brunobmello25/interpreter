@@ -1,6 +1,6 @@
 use std::io::{self, Stdin, Write};
 
-use crate::{lexer::Lexer, token::Token};
+use crate::{ast::program::Program, lexer::Lexer, parser::parser::Parser, token::Token};
 
 pub struct Repl {}
 
@@ -9,20 +9,29 @@ const PROMPT: &'static str = ">> ";
 impl Repl {
     pub fn start(stdin: Stdin) {
         let mut line = String::new();
-
         Self::read_input(&mut line, &stdin);
 
         while !line.trim().is_empty() {
-            let mut lexer = Lexer::new(&line);
+            let lexer = Lexer::new(&line);
+            let mut parser = Parser::new(lexer);
 
-            let mut token = lexer.next_token();
-            while token != Token::EOF {
-                println!("{:?}", token);
-                token = lexer.next_token();
+            let program = parser.parse_program();
+
+            if parser.errors.len() == 0 {
+                Self::print_program(&program);
+            } else {
+                println!("Woops! parser got {} errors!", parser.errors.len());
             }
 
             Self::read_input(&mut line, &stdin);
         }
+    }
+
+    fn print_program(program: &Program) {
+        for stmt in &program.statements {
+            println!("{:?}", stmt);
+        }
+        println!("");
     }
 
     fn read_input(input: &mut String, stdin: &Stdin) {
