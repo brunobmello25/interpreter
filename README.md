@@ -7,4 +7,4 @@ An interpreter written in rust, based on [the interpreter book](https://interpre
 # TODO
 
 - [ ] add location information to parser errors
-- [ ] macro expect peek
+- [x] macro expect peek
