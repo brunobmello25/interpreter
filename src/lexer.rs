@@ -55,7 +55,7 @@ impl Lexer {
             '<' => Token::LT,
             '>' => Token::GT,
             '0'..='9' => {
-                return Token::Integer(self.read_number());
+                return Token::integer(self.read_number());
             }
             'a'..='z' | 'A'..='Z' | '_' => {
                 let word = self.read_word();
@@ -73,6 +73,7 @@ impl Lexer {
 
                 return token;
             }
+            '%' => Token::Modulo,
             ch => Token::Illegal(ch),
         };
 
@@ -173,6 +174,7 @@ mod tests {
 
             10 == 10;
             10 != 9;
+            10 % 3;
         "});
 
         let expected_tokens = vec![
@@ -248,6 +250,10 @@ mod tests {
             Token::integer("10"),
             Token::NotEq,
             Token::integer("9"),
+            Token::Semicolon,
+            Token::integer("10"),
+            Token::Modulo,
+            Token::integer("3"),
             Token::Semicolon,
             Token::EOF,
         ];

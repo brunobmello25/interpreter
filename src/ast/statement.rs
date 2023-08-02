@@ -1,7 +1,5 @@
 use std::fmt::Display;
 
-use crate::token::Token;
-
 use super::expression::Expression;
 
 #[derive(PartialEq, Debug)]
@@ -32,7 +30,7 @@ impl Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
             Statement::Let { name, value } => write!(f, "let {} = {}", name, value),
-            Statement::Return { value } => write!(f, "return value"),
+            Statement::Return { value } => write!(f, "return {}", value),
             Statement::Expression(expression) => write!(f, "{}", expression),
         }
     }

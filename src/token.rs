@@ -27,6 +27,7 @@ pub enum Token {
     Return,
     Eq,
     NotEq,
+    Modulo,
 }
 
 impl Clone for Token {
@@ -59,6 +60,7 @@ impl Clone for Token {
             Self::Return => Self::Return,
             Self::Eq => Self::Eq,
             Self::NotEq => Self::NotEq,
+            Self::Modulo => Self::Modulo,
         }
     }
 }

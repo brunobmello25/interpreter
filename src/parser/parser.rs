@@ -248,6 +248,7 @@ impl Parser {
             Token::Slash => InfixOperator::Div,
             Token::GT => InfixOperator::GreaterThan,
             Token::LT => InfixOperator::LessThan,
+            Token::Modulo => InfixOperator::Modulo,
             Token::LParen => return self.parse_call_expression(lhs),
             _ => return Err(ParserError {}),
         };
@@ -381,11 +382,12 @@ mod tests {
             5 < 5;
             5 == 5;
             5 != 5;
+            5 % 5;
         "});
         let program = parser.parse_program();
 
         assert_eq!(parser.errors.len(), 0);
-        assert_eq!(program.statements.len(), 8);
+        assert_eq!(program.statements.len(), 9);
 
         macro_rules! infix_assert {
             ($index:expr, $op:expr) => {
@@ -407,6 +409,7 @@ mod tests {
         infix_assert!(5, InfixOperator::LessThan);
         infix_assert!(6, InfixOperator::Equal);
         infix_assert!(7, InfixOperator::NotEqual);
+        infix_assert!(8, InfixOperator::Modulo);
     }
 
     #[test]

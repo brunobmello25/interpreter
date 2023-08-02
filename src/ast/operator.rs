@@ -1,7 +1,5 @@
 use std::fmt::Display;
 
-use crate::token::Token;
-
 #[derive(PartialEq, Debug)]
 pub enum PrefixOperator {
     Not,

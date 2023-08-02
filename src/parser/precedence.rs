@@ -23,6 +23,7 @@ impl From<&Token> for Precedence {
             Token::GT => Precedence::LESSGREATER,
             Token::LT => Precedence::LESSGREATER,
             Token::LParen => Precedence::CALL,
+            Token::Modulo => Precedence::PRODUCT,
             _ => Precedence::LOWEST,
         }
     }
