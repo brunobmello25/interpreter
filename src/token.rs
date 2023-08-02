@@ -34,7 +34,7 @@ impl Clone for Token {
     fn clone(&self) -> Self {
         match self {
             Self::Let => Self::Let,
-            Self::Identifier(identifier) => Self::Identifier(identifier.clone()),
+            Self::Identifier(identifier) => Self::identifier(identifier),
             Self::Assign => Self::Assign,
             Self::Integer(integer) => Self::Integer(integer.clone()),
             Self::Comma => Self::Comma,

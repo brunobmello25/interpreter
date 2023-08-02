@@ -10,7 +10,6 @@ pub enum Expression {
     Int(i64),
     Bool(bool),
     Identifier(String),
-    String(String),
     If {
         condition: Box<Expression>,
         consequence: Vec<Statement>,
@@ -87,7 +86,6 @@ impl Display for Expression {
             Expression::Bool(b) => write!(f, "{}", b),
             Expression::Int(i) => write!(f, "{}", i),
             Expression::Identifier(identifier) => write!(f, "{}", identifier),
-            Expression::String(str) => write!(f, "\"{}\"", str),
             Expression::If {
                 condition,
                 consequence,
@@ -173,12 +171,6 @@ mod tests {
     fn test_identifier() {
         let identifier_expr = Expression::identifier("foo");
         assert_eq!(format!("{}", identifier_expr), "foo");
-    }
-
-    #[test]
-    fn test_string() {
-        let string_expr = Expression::String("foo".to_string());
-        assert_eq!(format!("{}", string_expr), "\"foo\"");
     }
 
     #[test]
