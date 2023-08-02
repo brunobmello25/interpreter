@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     ast::{
         expression::Expression,
@@ -7,17 +9,28 @@ use crate::{
     },
     expect_peek,
     lexer::Lexer,
+    location::{self, Location},
     parser::precedence::Precedence,
     token::{Token, TokenType},
 };
 
 pub struct ParserError {
     msg: String,
+    location: Location,
+}
+
+impl Display for ParserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[ParserError:{}] {} ", self.location, self.msg)
+    }
 }
 
 impl ParserError {
-    fn new(msg: impl Into<String>) -> ParserError {
-        ParserError { msg: msg.into() }
+    fn new(msg: impl Into<String>, location: &Location) -> ParserError {
+        ParserError {
+            msg: msg.into(),
+            location: location.clone(),
+        }
     }
 }
 
@@ -113,10 +126,10 @@ impl<'a> Parser<'a> {
             TokenType::Bang | TokenType::Minus => self.parse_prefix_expression(),
             TokenType::If => self.parse_if_expression(),
             TokenType::Function => self.parse_function_literal(),
-            token_type => Err(ParserError::new(format!(
-                "{}: unexpected token {}",
-                self.current_token.location, token_type,
-            ))),
+            token_type => Err(ParserError::new(
+                format!("unexpected token {}", token_type),
+                &self.current_token.location,
+            )),
         }
     }
 
@@ -242,10 +255,10 @@ impl<'a> Parser<'a> {
             TokenType::Bang => PrefixOperator::Not,
             TokenType::Minus => PrefixOperator::Negative,
             token_type => {
-                return Err(ParserError::new(format!(
-                    "{}: unexpected token {}",
-                    self.current_token.location, token_type
-                )))
+                return Err(ParserError::new(
+                    format!("unexpected token {}", token_type),
+                    &self.current_token.location,
+                ))
             }
         };
 
@@ -270,10 +283,10 @@ impl<'a> Parser<'a> {
             TokenType::Modulo => InfixOperator::Modulo,
             TokenType::LParen => return self.parse_call_expression(lhs),
             token_type => {
-                return Err(ParserError::new(format!(
-                    "{}: unexpected token {}",
-                    self.current_token.location, token_type
-                )))
+                return Err(ParserError::new(
+                    format!("unexpected token {}", token_type),
+                    &self.current_token.location,
+                ))
             }
         };
 
@@ -287,19 +300,19 @@ impl<'a> Parser<'a> {
         match &self.current_token.token_type {
             TokenType::True => Ok(Expression::Bool(true)),
             TokenType::False => Ok(Expression::Bool(false)),
-            _ => Err(ParserError::new(format!(
-                "expected boolean, got {}",
-                self.current_token.token_type
-            ))),
+            _ => Err(ParserError::new(
+                format!("expected boolean, got {}", self.current_token.token_type),
+                &self.current_token.location,
+            )),
         }
     }
 
     fn parse_integer(&self, literal: &String) -> Result<Expression, ParserError> {
         literal.parse().map(Expression::Int).map_err(|_| {
-            ParserError::new(format!(
-                "{}: failed to parse integer {}",
-                self.current_token.location, literal
-            ))
+            ParserError::new(
+                format!("failed to parse integer {}", literal),
+                &self.current_token.location,
+            )
         })
     }
 
@@ -309,10 +322,10 @@ impl<'a> Parser<'a> {
         let identifier = match &self.current_token.token_type {
             TokenType::Identifier(identifier) => identifier.clone(),
             _ => {
-                return Err(ParserError::new(format!(
-                    "{}: expected identifier, got {}",
-                    self.current_token.location, self.current_token.token_type
-                )))
+                return Err(ParserError::new(
+                    format!("expected identifier, got {}", self.current_token.token_type),
+                    &self.current_token.location.clone(),
+                ))
             }
         };
 
@@ -696,12 +709,6 @@ mod tests {
         );
     }
 
-    fn make_parser<'a>(input: &'a str) -> Parser<'a> {
-        let lexer = Lexer::new(input);
-        let parser = Parser::new(lexer);
-        return parser;
-    }
-
     #[test]
     fn test_precedences() {
         let tests = vec![
@@ -737,5 +744,11 @@ mod tests {
             assert_eq!(parser.errors.len(), 0);
             assert_eq!(program.to_string().trim(), test.1);
         }
+    }
+
+    fn make_parser<'a>(input: &'a str) -> Parser<'a> {
+        let lexer = Lexer::new(input);
+        let parser = Parser::new(lexer);
+        return parser;
     }
 }

@@ -21,6 +21,9 @@ impl Repl {
                 Self::print_program(&program);
             } else {
                 println!("Woops! parser got {} errors!", parser.errors.len());
+                for error in parser.errors {
+                    println!("{}", error);
+                }
             }
 
             Self::read_input(&mut line, &stdin);
