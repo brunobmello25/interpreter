@@ -6,7 +6,6 @@ use super::{
 };
 
 #[derive(PartialEq, Debug)]
-#[allow(dead_code)]
 pub enum Expression {
     Int(i64),
     Bool(bool),
