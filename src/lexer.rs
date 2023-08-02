@@ -1,3 +1,4 @@
+use crate::location::Location;
 use crate::token::{Token, TokenType};
 use std::iter::Peekable;
 use std::str::Chars;
@@ -5,7 +6,8 @@ use std::str::Chars;
 pub struct Lexer<'a> {
     chars: Peekable<Chars<'a>>,
     ch: Option<char>,
-    position: usize,
+    line: usize,
+    column: usize,
 }
 
 impl<'a> Lexer<'a> {
@@ -13,7 +15,8 @@ impl<'a> Lexer<'a> {
         let mut lexer = Lexer {
             chars: input.chars().peekable(),
             ch: None,
-            position: 0,
+            line: 1,
+            column: 0,
         };
 
         lexer.read_char();
@@ -23,6 +26,8 @@ impl<'a> Lexer<'a> {
 
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
+
+        let location = Location::new(self.line, self.column);
 
         let token_type = match self.ch {
             Some(',') => TokenType::Comma,
@@ -54,7 +59,7 @@ impl<'a> Lexer<'a> {
             Some('>') => TokenType::GT,
             Some('0'..='9') => {
                 let token_type = TokenType::Integer(self.read_integer());
-                return Token::new(token_type);
+                return Token::new(token_type, location);
             }
             Some('a'..='z') | Some('A'..='Z') | Some('_') => {
                 let word = self.read_word();
@@ -70,7 +75,7 @@ impl<'a> Lexer<'a> {
                     _ => TokenType::Identifier(word),
                 };
 
-                return Token::new(token_type);
+                return Token::new(token_type, location);
             }
             Some('%') => TokenType::Modulo,
             Some(ch) => TokenType::Illegal(ch),
@@ -78,7 +83,7 @@ impl<'a> Lexer<'a> {
         };
 
         self.read_char();
-        return Token::new(token_type);
+        return Token::new(token_type, location);
     }
 
     fn peek_char(&mut self) -> Option<&char> {
@@ -88,8 +93,14 @@ impl<'a> Lexer<'a> {
     fn read_char(&mut self) {
         match self.chars.next() {
             Some(ch) => {
+                if ch == '\n' {
+                    self.line += 1;
+                    self.column = 0;
+                } else {
+                    self.column += 1;
+                }
+
                 self.ch = Some(ch);
-                self.position += 1;
             }
             None => {
                 self.ch = None;
@@ -158,8 +169,14 @@ mod tests {
     fn test_read_equals_and_not_equals() {
         let mut lexer = Lexer::new("==\n!=");
 
-        assert_eq!(lexer.next_token(), Token::new(TokenType::Eq));
-        assert_eq!(lexer.next_token(), Token::new(TokenType::NotEq));
+        assert_eq!(
+            lexer.next_token(),
+            Token::new(TokenType::Eq, Location::new(1, 1))
+        );
+        assert_eq!(
+            lexer.next_token(),
+            Token::new(TokenType::NotEq, Location::new(2, 1))
+        );
     }
 
     #[test]
@@ -168,61 +185,42 @@ mod tests {
 
         assert_eq!(
             lexer.next_token(),
-            Token::new(TokenType::identifier("banana"))
+            Token::new(TokenType::identifier("banana"), Location::new(1, 1))
         );
         assert_eq!(
             lexer.next_token(),
-            Token::new(TokenType::identifier("pera"))
+            Token::new(TokenType::identifier("pera"), Location::new(1, 8))
         );
-        assert_eq!(lexer.next_token(), Token::new(TokenType::identifier("uva")));
-        assert_eq!(lexer.next_token(), Token::new(TokenType::EOF));
-        assert_eq!(lexer.next_token(), Token::new(TokenType::EOF));
-        assert_eq!(lexer.next_token(), Token::new(TokenType::EOF));
+        assert_eq!(
+            lexer.next_token(),
+            Token::new(TokenType::identifier("uva"), Location::new(2, 1))
+        );
+        assert_eq!(
+            lexer.next_token(),
+            Token::new(TokenType::EOF, Location::new(2, 3))
+        );
+        assert_eq!(
+            lexer.next_token(),
+            Token::new(TokenType::EOF, Location::new(2, 3))
+        );
+        assert_eq!(
+            lexer.next_token(),
+            Token::new(TokenType::EOF, Location::new(2, 3))
+        );
     }
 
     #[test]
     fn test_read_integer() {
         let mut lexer = Lexer::new("1234\n6789");
 
-        assert_eq!(lexer.next_token(), Token::new(TokenType::integer("1234")));
-        assert_eq!(lexer.next_token(), Token::new(TokenType::integer("6789")));
-    }
-
-    #[test]
-    fn test_position() {
-        let mut lexer = Lexer::new("...");
-
-        assert_eq!(lexer.position, 1);
-        lexer.next_token();
-        assert_eq!(lexer.position, 2);
-        lexer.next_token();
-        assert_eq!(lexer.position, 3);
-        lexer.next_token();
-        assert_eq!(lexer.position, 3);
-        lexer.next_token();
-        assert_eq!(lexer.position, 3);
-    }
-
-    #[test]
-    fn test_position_single_character() {
-        let mut lexer = Lexer::new(".");
-
-        assert_eq!(lexer.position, 1);
-        lexer.next_token();
-        assert_eq!(lexer.position, 1);
-        lexer.next_token();
-        assert_eq!(lexer.position, 1);
-        lexer.next_token();
-        assert_eq!(lexer.position, 1);
-    }
-
-    #[test]
-    fn test_position_empty() {
-        let mut lexer = Lexer::new("");
-
-        assert_eq!(lexer.position, 0);
-        lexer.next_token();
-        assert_eq!(lexer.position, 0);
+        assert_eq!(
+            lexer.next_token(),
+            Token::new(TokenType::integer("1234"), Location::new(1, 1))
+        );
+        assert_eq!(
+            lexer.next_token(),
+            Token::new(TokenType::integer("6789"), Location::new(2, 1))
+        );
     }
 
     #[test]

@@ -4,11 +4,8 @@ pub struct Location {
     column: usize,
 }
 
-impl Clone for Location {
-    fn clone(&self) -> Self {
-        Self {
-            line: self.line,
-            column: self.column,
-        }
+impl Location {
+    pub fn new(line: usize, column: usize) -> Self {
+        Self { line, column }
     }
 }
