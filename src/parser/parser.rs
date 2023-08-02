@@ -9,7 +9,7 @@ use crate::{
     },
     expect_peek,
     lexer::Lexer,
-    location::{self, Location},
+    location::Location,
     parser::precedence::Precedence,
     token::{Token, TokenType},
 };
@@ -135,10 +135,7 @@ impl<'a> Parser<'a> {
 
     fn parse_call_expression(&mut self, function: Expression) -> Result<Expression, ParserError> {
         let arguments = self.parse_call_arguments()?;
-        Ok(Expression::Call {
-            function: Box::new(function),
-            arguments,
-        })
+        Ok(Expression::call(function, arguments))
     }
 
     fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParserError> {

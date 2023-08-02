@@ -58,7 +58,7 @@ impl<'a> Lexer<'a> {
             Some('<') => TokenType::LT,
             Some('>') => TokenType::GT,
             Some('0'..='9') => {
-                let token_type = TokenType::Integer(self.read_integer());
+                let token_type = TokenType::integer(self.read_integer());
                 return Token::new(token_type, location);
             }
             Some('a'..='z') | Some('A'..='Z') | Some('_') => {
@@ -72,7 +72,7 @@ impl<'a> Lexer<'a> {
                     "if" => TokenType::If,
                     "else" => TokenType::Else,
                     "return" => TokenType::Return,
-                    _ => TokenType::Identifier(word),
+                    _ => TokenType::identifier(word),
                 };
 
                 return Token::new(token_type, location);
