@@ -6,7 +6,10 @@ macro_rules! expect_peek {
                 $self.next_token();
                 Ok(())
             }
-            _ => Err(ParserError {}),
+            _ => Err(ParserError::new(format!(
+                "unexpected token {} in {}",
+                $self.peeking_token.token_type, $self.peeking_token.location,
+            ))),
         }
     };
 }

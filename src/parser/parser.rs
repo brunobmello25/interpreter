@@ -11,7 +11,15 @@ use crate::{
     token::{Token, TokenType},
 };
 
-pub struct ParserError {}
+pub struct ParserError {
+    msg: String,
+}
+
+impl ParserError {
+    fn new(msg: impl Into<String>) -> ParserError {
+        ParserError { msg: msg.into() }
+    }
+}
 
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
@@ -105,7 +113,10 @@ impl<'a> Parser<'a> {
             TokenType::Bang | TokenType::Minus => self.parse_prefix_expression(),
             TokenType::If => self.parse_if_expression(),
             TokenType::Function => self.parse_function_literal(),
-            _ => Err(ParserError {}),
+            token_type => Err(ParserError::new(format!(
+                "{}: unexpected token {}",
+                self.current_token.location, token_type,
+            ))),
         }
     }
 
@@ -230,14 +241,18 @@ impl<'a> Parser<'a> {
         let operator = match &self.current_token.token_type {
             TokenType::Bang => PrefixOperator::Not,
             TokenType::Minus => PrefixOperator::Negative,
-            _ => return Err(ParserError {}),
+            token_type => {
+                return Err(ParserError::new(format!(
+                    "{}: unexpected token {}",
+                    self.current_token.location, token_type
+                )))
+            }
         };
 
         self.next_token();
 
-        self.parse_expression(Precedence::PREFIX)
-            .map(|expression| Expression::prefix(expression, operator))
-            .map_err(|_| ParserError {})
+        let expression = self.parse_expression(Precedence::PREFIX)?;
+        Ok(Expression::prefix(expression, operator))
     }
 
     fn parse_infix(&mut self, lhs: Expression) -> Result<Expression, ParserError> {
@@ -254,32 +269,38 @@ impl<'a> Parser<'a> {
             TokenType::LT => InfixOperator::LessThan,
             TokenType::Modulo => InfixOperator::Modulo,
             TokenType::LParen => return self.parse_call_expression(lhs),
-            _ => return Err(ParserError {}),
+            token_type => {
+                return Err(ParserError::new(format!(
+                    "{}: unexpected token {}",
+                    self.current_token.location, token_type
+                )))
+            }
         };
 
         self.next_token();
 
-        let rhs = self.parse_expression(precedence);
-
-        match rhs {
-            Ok(rhs) => Ok(Expression::infix(lhs, rhs, operator)),
-            Err(_) => Err(ParserError {}),
-        }
+        let rhs = self.parse_expression(precedence)?;
+        Ok(Expression::infix(lhs, rhs, operator))
     }
 
     fn parse_boolean(&self) -> Result<Expression, ParserError> {
         match &self.current_token.token_type {
             TokenType::True => Ok(Expression::Bool(true)),
             TokenType::False => Ok(Expression::Bool(false)),
-            _ => Err(ParserError {}),
+            _ => Err(ParserError::new(format!(
+                "expected boolean, got {}",
+                self.current_token.token_type
+            ))),
         }
     }
 
     fn parse_integer(&self, literal: &String) -> Result<Expression, ParserError> {
-        literal
-            .parse()
-            .map(Expression::Int)
-            .map_err(|_| ParserError {})
+        literal.parse().map(Expression::Int).map_err(|_| {
+            ParserError::new(format!(
+                "{}: failed to parse integer {}",
+                self.current_token.location, literal
+            ))
+        })
     }
 
     fn parse_let_statement(&mut self) -> Result<Statement, ParserError> {
@@ -287,7 +308,12 @@ impl<'a> Parser<'a> {
 
         let identifier = match &self.current_token.token_type {
             TokenType::Identifier(identifier) => identifier.clone(),
-            _ => return Err(ParserError {}),
+            _ => {
+                return Err(ParserError::new(format!(
+                    "{}: expected identifier, got {}",
+                    self.current_token.location, self.current_token.token_type
+                )))
+            }
         };
 
         expect_peek!(self, Assign)?;
