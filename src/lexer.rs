@@ -24,7 +24,6 @@ impl<'a> Lexer<'a> {
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
 
-        println!("current: {:?}", self.ch);
         let token_type = match self.ch {
             Some(',') => TokenType::Comma,
             Some('(') => TokenType::LParen,
@@ -104,7 +103,6 @@ impl<'a> Lexer<'a> {
                 break;
             }
 
-            println!("skipping {:?}", self.ch);
             self.read_char();
         }
     }
@@ -113,9 +111,7 @@ impl<'a> Lexer<'a> {
         let mut number = String::new();
 
         while let Some(ch) = self.ch {
-            println!("read_integer {:?}", self.ch);
             if !Lexer::is_digit(ch) {
-                println!("breaking with {:?}", self.ch);
                 break;
             }
 
@@ -123,7 +119,6 @@ impl<'a> Lexer<'a> {
             self.read_char();
         }
 
-        println!("finished reading number: \"{}\"", number);
         return number;
     }
 
@@ -131,7 +126,6 @@ impl<'a> Lexer<'a> {
         let mut word = String::new();
 
         while let Some(ch) = self.ch {
-            println!("read_word {:?}", self.ch);
             if !Lexer::is_letter(ch) {
                 break;
             }
