@@ -1,17 +1,11 @@
-use crate::location::Location;
-
 #[derive(Debug, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
-    pub location: Location,
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, location: Location) -> Self {
-        Self {
-            token_type,
-            location,
-        }
+    pub fn new(token_type: TokenType) -> Self {
+        Self { token_type }
     }
 }
 
@@ -80,10 +74,7 @@ impl Clone for Token {
             TokenType::Modulo => TokenType::Modulo,
         };
 
-        Token {
-            token_type,
-            location: self.location.clone(),
-        }
+        Token { token_type }
     }
 }
 

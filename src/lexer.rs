@@ -1,22 +1,19 @@
-use crate::{
-    location::Location,
-    token::{Token, TokenType},
-};
+use crate::token::{Token, TokenType};
+use std::iter::Peekable;
+use std::str::Chars;
 
-pub struct Lexer {
-    input: String,
+pub struct Lexer<'a> {
+    chars: Peekable<Chars<'a>>,
+    ch: Option<char>,
     position: usize,
-    reading_position: usize,
-    ch: char,
 }
 
-impl Lexer {
-    pub fn new(input: impl Into<String>) -> Self {
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Self {
         let mut lexer = Lexer {
-            input: input.into(),
+            chars: input.chars().peekable(),
+            ch: None,
             position: 0,
-            reading_position: 0,
-            ch: '\0',
         };
 
         lexer.read_char();
@@ -27,41 +24,40 @@ impl Lexer {
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
 
+        println!("current: {:?}", self.ch);
         let token_type = match self.ch {
-            ',' => TokenType::Comma,
-            '(' => TokenType::LParen,
-            ')' => TokenType::RParen,
-            '{' => TokenType::LBrace,
-            '}' => TokenType::RBrace,
-            ';' => TokenType::Semicolon,
-            '\0' => TokenType::EOF,
-            '!' => {
-                if self.peek_char() == '=' {
+            Some(',') => TokenType::Comma,
+            Some('(') => TokenType::LParen,
+            Some(')') => TokenType::RParen,
+            Some('{') => TokenType::LBrace,
+            Some('}') => TokenType::RBrace,
+            Some(';') => TokenType::Semicolon,
+            Some('!') => match self.peek_char() {
+                Some('=') => {
                     self.read_char();
                     TokenType::NotEq
-                } else {
-                    TokenType::Bang
                 }
-            }
-            '=' => {
-                if self.peek_char() == '=' {
+                _ => TokenType::Bang,
+            },
+            Some('=') => {
+                if let Some('=') = self.peek_char() {
                     self.read_char();
                     TokenType::Eq
                 } else {
                     TokenType::Assign
                 }
             }
-            '*' => TokenType::Asterisk,
-            '/' => TokenType::Slash,
-            '+' => TokenType::Plus,
-            '-' => TokenType::Minus,
-            '<' => TokenType::LT,
-            '>' => TokenType::GT,
-            '0'..='9' => {
-                let token_type = TokenType::integer(self.read_number());
-                return Token::new(token_type, self.location());
+            Some('*') => TokenType::Asterisk,
+            Some('/') => TokenType::Slash,
+            Some('+') => TokenType::Plus,
+            Some('-') => TokenType::Minus,
+            Some('<') => TokenType::LT,
+            Some('>') => TokenType::GT,
+            Some('0'..='9') => {
+                let token_type = TokenType::Integer(self.read_integer());
+                return Token::new(token_type);
             }
-            'a'..='z' | 'A'..='Z' | '_' => {
+            Some('a'..='z') | Some('A'..='Z') | Some('_') => {
                 let word = self.read_word();
 
                 let token_type = match word.as_str() {
@@ -75,72 +71,84 @@ impl Lexer {
                     _ => TokenType::Identifier(word),
                 };
 
-                return Token::new(token_type, self.location());
+                return Token::new(token_type);
             }
-            '%' => TokenType::Modulo,
-            ch => TokenType::Illegal(ch),
+            Some('%') => TokenType::Modulo,
+            Some(ch) => TokenType::Illegal(ch),
+            None => TokenType::EOF,
         };
 
         self.read_char();
-        return Token::new(token_type, self.location());
+        return Token::new(token_type);
     }
 
-    fn location(&self) -> Location {
-        Location::default()
-    }
-
-    fn peek_char(&self) -> char {
-        match self.input.chars().nth(self.reading_position) {
-            Some(c) => c,
-            None => '\0',
-        }
+    fn peek_char(&mut self) -> Option<&char> {
+        self.chars.peek()
     }
 
     fn read_char(&mut self) {
-        if let Some(c) = self.input.chars().nth(self.reading_position) {
-            self.ch = c;
-        } else {
-            self.ch = '\0';
+        match self.chars.next() {
+            Some(ch) => {
+                self.ch = Some(ch);
+                self.position += 1;
+            }
+            None => {
+                self.ch = None;
+            }
         }
-
-        self.position = self.reading_position;
-        self.reading_position += 1;
-    }
-
-    fn read_word(&mut self) -> String {
-        let initial_pos = self.position;
-
-        while self.is_letter(self.ch) {
-            self.read_char();
-        }
-
-        let result = self.input[initial_pos..self.position].to_string();
-
-        return result;
-    }
-
-    fn read_number(&mut self) -> String {
-        let initial_pos = self.position;
-
-        while self.is_number(self.ch) {
-            self.read_char();
-        }
-
-        self.input[initial_pos..self.position].to_string()
-    }
-
-    fn is_letter(&self, ch: char) -> bool {
-        return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_';
-    }
-
-    fn is_number(&self, ch: char) -> bool {
-        return '0' <= ch && ch <= '9';
     }
 
     fn skip_whitespace(&mut self) {
-        while [' ', '\t', '\n', '\r'].contains(&self.ch) {
+        while let Some(ch) = self.ch {
+            if !([' ', '\t', '\n', '\r'].contains(&ch)) {
+                break;
+            }
+
+            println!("skipping {:?}", self.ch);
             self.read_char();
         }
+    }
+
+    fn read_integer(&mut self) -> String {
+        let mut number = String::new();
+
+        while let Some(ch) = self.ch {
+            println!("read_integer {:?}", self.ch);
+            if !Lexer::is_digit(ch) {
+                println!("breaking with {:?}", self.ch);
+                break;
+            }
+
+            number.push(ch);
+            self.read_char();
+        }
+
+        println!("finished reading number: \"{}\"", number);
+        return number;
+    }
+
+    fn read_word(&mut self) -> String {
+        let mut word = String::new();
+
+        while let Some(ch) = self.ch {
+            println!("read_word {:?}", self.ch);
+            if !Lexer::is_letter(ch) {
+                break;
+            }
+
+            word.push(ch);
+            self.read_char();
+        }
+
+        return word;
+    }
+
+    fn is_letter(ch: char) -> bool {
+        ('a'..='z').contains(&ch) || ('A'..='Z').contains(&ch) || ch == '_'
+    }
+
+    fn is_digit(ch: char) -> bool {
+        ('0'..='9').contains(&ch)
     }
 }
 
@@ -151,6 +159,172 @@ mod tests {
     use crate::token::TokenType;
 
     use super::*;
+
+    #[test]
+    fn test_read_equals_and_not_equals() {
+        let mut lexer = Lexer::new("==\n!=");
+
+        assert_eq!(lexer.next_token(), Token::new(TokenType::Eq));
+        assert_eq!(lexer.next_token(), Token::new(TokenType::NotEq));
+    }
+
+    #[test]
+    fn test_read_word() {
+        let mut lexer = Lexer::new("banana pera\nuva");
+
+        assert_eq!(
+            lexer.next_token(),
+            Token::new(TokenType::identifier("banana"))
+        );
+        assert_eq!(
+            lexer.next_token(),
+            Token::new(TokenType::identifier("pera"))
+        );
+        assert_eq!(lexer.next_token(), Token::new(TokenType::identifier("uva")));
+        assert_eq!(lexer.next_token(), Token::new(TokenType::EOF));
+        assert_eq!(lexer.next_token(), Token::new(TokenType::EOF));
+        assert_eq!(lexer.next_token(), Token::new(TokenType::EOF));
+    }
+
+    #[test]
+    fn test_read_integer() {
+        let mut lexer = Lexer::new("1234\n6789");
+
+        assert_eq!(lexer.next_token(), Token::new(TokenType::integer("1234")));
+        assert_eq!(lexer.next_token(), Token::new(TokenType::integer("6789")));
+    }
+
+    #[test]
+    fn test_position() {
+        let mut lexer = Lexer::new("...");
+
+        assert_eq!(lexer.position, 1);
+        lexer.next_token();
+        assert_eq!(lexer.position, 2);
+        lexer.next_token();
+        assert_eq!(lexer.position, 3);
+        lexer.next_token();
+        assert_eq!(lexer.position, 3);
+        lexer.next_token();
+        assert_eq!(lexer.position, 3);
+    }
+
+    #[test]
+    fn test_position_single_character() {
+        let mut lexer = Lexer::new(".");
+
+        assert_eq!(lexer.position, 1);
+        lexer.next_token();
+        assert_eq!(lexer.position, 1);
+        lexer.next_token();
+        assert_eq!(lexer.position, 1);
+        lexer.next_token();
+        assert_eq!(lexer.position, 1);
+    }
+
+    #[test]
+    fn test_position_empty() {
+        let mut lexer = Lexer::new("");
+
+        assert_eq!(lexer.position, 0);
+        lexer.next_token();
+        assert_eq!(lexer.position, 0);
+    }
+
+    #[test]
+    fn test_skip_whitespace() {
+        let mut lexer = Lexer::new("    ,\t\n\r.");
+
+        assert_eq!(lexer.ch, Some(' '));
+        assert_eq!(lexer.peek_char(), Some(&' '));
+        lexer.skip_whitespace();
+        assert_eq!(lexer.ch, Some(','));
+        assert_eq!(lexer.peek_char(), Some(&'\t'));
+        lexer.next_token();
+        assert_eq!(lexer.ch, Some('\t'));
+        assert_eq!(lexer.peek_char(), Some(&'\n'));
+        lexer.skip_whitespace();
+        assert_eq!(lexer.ch, Some('.'));
+        assert_eq!(lexer.peek_char(), None);
+    }
+
+    #[test]
+    fn test_peek_char_empty() {
+        let mut lexer = Lexer::new("");
+
+        assert_eq!(lexer.ch, None);
+        assert_eq!(lexer.peek_char(), None);
+        assert_eq!(lexer.peek_char(), None);
+        lexer.next_token();
+        assert_eq!(lexer.ch, None);
+        assert_eq!(lexer.peek_char(), None);
+        assert_eq!(lexer.peek_char(), None);
+    }
+
+    #[test]
+    fn test_peek_char_single_char() {
+        let mut lexer = Lexer::new(".");
+
+        assert_eq!(lexer.ch, Some('.'));
+        assert_eq!(lexer.peek_char(), None);
+        assert_eq!(lexer.peek_char(), None);
+        lexer.next_token();
+        assert_eq!(lexer.ch, None);
+        assert_eq!(lexer.peek_char(), None);
+        assert_eq!(lexer.peek_char(), None);
+    }
+
+    #[test]
+    fn test_peek_char() {
+        let mut lexer = Lexer::new(".,*");
+
+        assert_eq!(lexer.ch, Some('.'));
+        assert_eq!(lexer.peek_char(), Some(&','));
+        assert_eq!(lexer.peek_char(), Some(&','));
+        lexer.next_token();
+        assert_eq!(lexer.ch, Some(','));
+        assert_eq!(lexer.peek_char(), Some(&'*'));
+        assert_eq!(lexer.peek_char(), Some(&'*'));
+        lexer.next_token();
+        assert_eq!(lexer.ch, Some('*'));
+        assert_eq!(lexer.peek_char(), None);
+        assert_eq!(lexer.peek_char(), None);
+    }
+
+    #[test]
+    fn test_read_char_iterator_empty() {
+        let mut lexer = Lexer::new("");
+
+        assert_eq!(lexer.ch, None);
+        lexer.next_token();
+        assert_eq!(lexer.ch, None);
+        lexer.next_token();
+        assert_eq!(lexer.ch, None);
+        lexer.next_token();
+        assert_eq!(lexer.ch, None);
+        lexer.next_token();
+    }
+
+    #[test]
+    fn test_read_char_iterator() {
+        let mut lexer = Lexer::new(",,,,");
+
+        assert_eq!(lexer.ch, Some(','));
+        lexer.next_token();
+        assert_eq!(lexer.ch, Some(','));
+        lexer.next_token();
+        assert_eq!(lexer.ch, Some(','));
+        lexer.next_token();
+        assert_eq!(lexer.ch, Some(','));
+        lexer.next_token();
+        assert_eq!(lexer.ch, None);
+        lexer.next_token();
+        assert_eq!(lexer.ch, None);
+        lexer.next_token();
+        assert_eq!(lexer.ch, None);
+        lexer.next_token();
+        assert_eq!(lexer.ch, None);
+    }
 
     #[test]
     fn test_next_token_empty() {

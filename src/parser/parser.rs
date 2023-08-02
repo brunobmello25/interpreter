@@ -13,15 +13,15 @@ use crate::{
 
 pub struct ParserError {}
 
-pub struct Parser {
-    lexer: Lexer,
+pub struct Parser<'a> {
+    lexer: Lexer<'a>,
     current_token: Token,
     peeking_token: Token,
     pub errors: Vec<ParserError>,
 }
 
-impl Parser {
-    pub fn new(mut lexer: Lexer) -> Self {
+impl<'a> Parser<'a> {
+    pub fn new(mut lexer: Lexer<'a>) -> Self {
         let current_token = lexer.next_token();
         let peeking_token = lexer.next_token();
 
@@ -324,7 +324,7 @@ mod tests {
             statement::Statement,
         },
         lexer::Lexer,
-        token::{Token, TokenType},
+        token::TokenType,
     };
 
     use super::Parser;
@@ -670,9 +670,8 @@ mod tests {
         );
     }
 
-    fn make_parser(input: impl Into<String>) -> Parser {
-        let input = input.into();
-        let lexer = Lexer::new(&input);
+    fn make_parser<'a>(input: &'a str) -> Parser<'a> {
+        let lexer = Lexer::new(input);
         let parser = Parser::new(lexer);
         return parser;
     }
