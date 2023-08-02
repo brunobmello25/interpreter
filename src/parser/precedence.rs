@@ -1,4 +1,4 @@
-use crate::token::Token;
+use crate::token::{Token, TokenType};
 
 #[derive(Debug, PartialEq, PartialOrd)]
 pub enum Precedence {
@@ -13,17 +13,17 @@ pub enum Precedence {
 
 impl From<&Token> for Precedence {
     fn from(token: &Token) -> Self {
-        match token {
-            Token::Eq => Precedence::EQUALS,
-            Token::NotEq => Precedence::EQUALS,
-            Token::Plus => Precedence::SUM,
-            Token::Minus => Precedence::SUM,
-            Token::Slash => Precedence::PRODUCT,
-            Token::Asterisk => Precedence::PRODUCT,
-            Token::GT => Precedence::LESSGREATER,
-            Token::LT => Precedence::LESSGREATER,
-            Token::LParen => Precedence::CALL,
-            Token::Modulo => Precedence::PRODUCT,
+        match token.token_type {
+            TokenType::Eq => Precedence::EQUALS,
+            TokenType::NotEq => Precedence::EQUALS,
+            TokenType::Plus => Precedence::SUM,
+            TokenType::Minus => Precedence::SUM,
+            TokenType::Slash => Precedence::PRODUCT,
+            TokenType::Asterisk => Precedence::PRODUCT,
+            TokenType::GT => Precedence::LESSGREATER,
+            TokenType::LT => Precedence::LESSGREATER,
+            TokenType::LParen => Precedence::CALL,
+            TokenType::Modulo => Precedence::PRODUCT,
             _ => Precedence::LOWEST,
         }
     }

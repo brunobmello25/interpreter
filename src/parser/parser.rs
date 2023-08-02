@@ -8,7 +8,7 @@ use crate::{
     expect_peek,
     lexer::Lexer,
     parser::precedence::Precedence,
-    token::Token,
+    token::{Token, TokenType},
 };
 
 pub struct ParserError {}
@@ -38,7 +38,7 @@ impl Parser {
     pub fn parse_program(&mut self) -> Program {
         let mut program = Program::new();
 
-        while self.current_token != Token::EOF {
+        while self.current_token.token_type != TokenType::EOF {
             let stmt = self.parse_statement();
 
             match stmt {
@@ -53,9 +53,9 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> Result<Statement, ParserError> {
-        match self.current_token {
-            Token::Let => self.parse_let_statement(),
-            Token::Return => self.parse_return_statement(),
+        match self.current_token.token_type {
+            TokenType::Let => self.parse_let_statement(),
+            TokenType::Return => self.parse_return_statement(),
             _ => self.parse_expression_statement(),
         }
     }
@@ -63,7 +63,7 @@ impl Parser {
     fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
         let expression = self.parse_expression(Precedence::LOWEST)?;
 
-        if self.peeking_token == Token::Semicolon {
+        if self.peeking_token.token_type == TokenType::Semicolon {
             self.next_token();
         };
 
@@ -73,7 +73,7 @@ impl Parser {
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserError> {
         let mut lhs = self.parse_prefix()?;
 
-        while self.peeking_token != Token::Semicolon
+        while self.peeking_token.token_type != TokenType::Semicolon
             && precedence < Precedence::from(&self.peeking_token)
         {
             self.next_token();
@@ -85,24 +85,26 @@ impl Parser {
     }
 
     fn advance_tokens(&mut self) {
-        while self.current_token != Token::Semicolon && self.current_token != Token::EOF {
+        while self.current_token.token_type != TokenType::Semicolon
+            && self.current_token.token_type != TokenType::EOF
+        {
             self.next_token();
         }
 
-        if self.current_token == Token::Semicolon {
+        if self.current_token.token_type == TokenType::Semicolon {
             self.next_token();
         }
     }
 
     fn parse_prefix(&mut self) -> Result<Expression, ParserError> {
-        match &self.current_token {
-            Token::Identifier(identifier) => Ok(Expression::identifier(identifier)),
-            Token::Integer(integer_literal) => self.parse_integer(integer_literal),
-            Token::LParen => self.parse_grouped_expression(),
-            Token::True | Token::False => self.parse_boolean(),
-            Token::Bang | Token::Minus => self.parse_prefix_expression(),
-            Token::If => self.parse_if_expression(),
-            Token::Function => self.parse_function_literal(),
+        match &self.current_token.token_type {
+            TokenType::Identifier(identifier) => Ok(Expression::identifier(identifier)),
+            TokenType::Integer(integer_literal) => self.parse_integer(integer_literal),
+            TokenType::LParen => self.parse_grouped_expression(),
+            TokenType::True | TokenType::False => self.parse_boolean(),
+            TokenType::Bang | TokenType::Minus => self.parse_prefix_expression(),
+            TokenType::If => self.parse_if_expression(),
+            TokenType::Function => self.parse_function_literal(),
             _ => Err(ParserError {}),
         }
     }
@@ -118,7 +120,7 @@ impl Parser {
     fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParserError> {
         let mut arguments = vec![];
 
-        if self.peeking_token == Token::RParen {
+        if self.peeking_token.token_type == TokenType::RParen {
             self.next_token();
             return Ok(arguments);
         }
@@ -127,7 +129,7 @@ impl Parser {
 
         arguments.push(self.parse_expression(Precedence::LOWEST)?);
 
-        while self.peeking_token == Token::Comma {
+        while self.peeking_token.token_type == TokenType::Comma {
             self.next_token();
             self.next_token();
             arguments.push(self.parse_expression(Precedence::LOWEST)?);
@@ -153,18 +155,18 @@ impl Parser {
     fn parse_function_params(&mut self) -> Result<Vec<Expression>, ParserError> {
         let mut params = vec![];
 
-        if self.peeking_token == Token::RParen {
+        if self.peeking_token.token_type == TokenType::RParen {
             self.next_token();
             return Ok(params);
         }
 
         self.next_token();
 
-        while let Token::Identifier(identifier) = &self.current_token {
+        while let TokenType::Identifier(identifier) = &self.current_token.token_type {
             params.push(Expression::identifier(identifier));
 
             self.next_token();
-            if let Token::Comma = self.current_token {
+            if let TokenType::Comma = self.current_token.token_type {
                 self.next_token();
             }
         }
@@ -187,7 +189,7 @@ impl Parser {
 
         let mut alternative: Option<Vec<Statement>> = None;
 
-        if self.peeking_token == Token::Else {
+        if self.peeking_token.token_type == TokenType::Else {
             self.next_token();
 
             expect_peek!(self, LBrace)?;
@@ -203,7 +205,9 @@ impl Parser {
 
         let mut statements = vec![];
 
-        while self.current_token != Token::RBrace && self.current_token != Token::EOF {
+        while self.current_token.token_type != TokenType::RBrace
+            && self.current_token.token_type != TokenType::EOF
+        {
             let statement = self.parse_statement()?;
             statements.push(statement);
             self.next_token();
@@ -223,9 +227,9 @@ impl Parser {
     }
 
     fn parse_prefix_expression(&mut self) -> Result<Expression, ParserError> {
-        let operator = match &self.current_token {
-            Token::Bang => PrefixOperator::Not,
-            Token::Minus => PrefixOperator::Negative,
+        let operator = match &self.current_token.token_type {
+            TokenType::Bang => PrefixOperator::Not,
+            TokenType::Minus => PrefixOperator::Negative,
             _ => return Err(ParserError {}),
         };
 
@@ -239,17 +243,17 @@ impl Parser {
     fn parse_infix(&mut self, lhs: Expression) -> Result<Expression, ParserError> {
         let precedence = Precedence::from(&self.current_token);
 
-        let operator = match &self.current_token {
-            Token::Eq => InfixOperator::Equal,
-            Token::NotEq => InfixOperator::NotEqual,
-            Token::Plus => InfixOperator::Add,
-            Token::Minus => InfixOperator::Sub,
-            Token::Asterisk => InfixOperator::Mult,
-            Token::Slash => InfixOperator::Div,
-            Token::GT => InfixOperator::GreaterThan,
-            Token::LT => InfixOperator::LessThan,
-            Token::Modulo => InfixOperator::Modulo,
-            Token::LParen => return self.parse_call_expression(lhs),
+        let operator = match &self.current_token.token_type {
+            TokenType::Eq => InfixOperator::Equal,
+            TokenType::NotEq => InfixOperator::NotEqual,
+            TokenType::Plus => InfixOperator::Add,
+            TokenType::Minus => InfixOperator::Sub,
+            TokenType::Asterisk => InfixOperator::Mult,
+            TokenType::Slash => InfixOperator::Div,
+            TokenType::GT => InfixOperator::GreaterThan,
+            TokenType::LT => InfixOperator::LessThan,
+            TokenType::Modulo => InfixOperator::Modulo,
+            TokenType::LParen => return self.parse_call_expression(lhs),
             _ => return Err(ParserError {}),
         };
 
@@ -264,9 +268,9 @@ impl Parser {
     }
 
     fn parse_boolean(&self) -> Result<Expression, ParserError> {
-        match &self.current_token {
-            Token::True => Ok(Expression::Bool(true)),
-            Token::False => Ok(Expression::Bool(false)),
+        match &self.current_token.token_type {
+            TokenType::True => Ok(Expression::Bool(true)),
+            TokenType::False => Ok(Expression::Bool(false)),
             _ => Err(ParserError {}),
         }
     }
@@ -281,8 +285,8 @@ impl Parser {
     fn parse_let_statement(&mut self) -> Result<Statement, ParserError> {
         self.next_token();
 
-        let identifier = match &self.current_token {
-            Token::Identifier(identifier) => identifier.clone(),
+        let identifier = match &self.current_token.token_type {
+            TokenType::Identifier(identifier) => identifier.clone(),
             _ => return Err(ParserError {}),
         };
 
@@ -320,7 +324,7 @@ mod tests {
             statement::Statement,
         },
         lexer::Lexer,
-        token::Token,
+        token::{Token, TokenType},
     };
 
     use super::Parser;
@@ -453,26 +457,26 @@ mod tests {
     fn test_new_with_empty_input() {
         let parser = make_parser("");
 
-        assert_eq!(parser.current_token, Token::EOF);
-        assert_eq!(parser.peeking_token, Token::EOF);
+        assert_eq!(parser.current_token.token_type, TokenType::EOF);
+        assert_eq!(parser.peeking_token.token_type, TokenType::EOF);
     }
 
     #[test]
     fn test_new_with_single_token_input() {
         let parser = make_parser(";");
 
-        assert_eq!(parser.current_token, Token::Semicolon);
-        assert_eq!(parser.peeking_token, Token::EOF);
+        assert_eq!(parser.current_token.token_type, TokenType::Semicolon);
+        assert_eq!(parser.peeking_token.token_type, TokenType::EOF);
     }
 
     #[test]
     fn test_new_with_multiple_tokens_input() {
         let parser = make_parser("let five = 5;");
 
-        assert_eq!(parser.current_token, Token::Let);
+        assert_eq!(parser.current_token.token_type, TokenType::Let);
         assert_eq!(
-            parser.peeking_token,
-            Token::Identifier(String::from("five"))
+            parser.peeking_token.token_type,
+            TokenType::Identifier(String::from("five"))
         );
     }
 
@@ -480,20 +484,26 @@ mod tests {
     fn test_next_token() {
         let mut parser = make_parser("let five = 5;");
 
-        assert_eq!(parser.current_token, Token::Let);
-        assert_eq!(parser.peeking_token, Token::identifier("five"));
+        assert_eq!(parser.current_token.token_type, TokenType::Let);
+        assert_eq!(
+            parser.peeking_token.token_type,
+            TokenType::identifier("five")
+        );
 
         parser.next_token();
-        assert_eq!(parser.current_token, Token::identifier("five"));
-        assert_eq!(parser.peeking_token, Token::Assign);
+        assert_eq!(
+            parser.current_token.token_type,
+            TokenType::identifier("five")
+        );
+        assert_eq!(parser.peeking_token.token_type, TokenType::Assign);
 
         parser.next_token();
-        assert_eq!(parser.current_token, Token::Assign);
-        assert_eq!(parser.peeking_token, Token::integer("5"));
+        assert_eq!(parser.current_token.token_type, TokenType::Assign);
+        assert_eq!(parser.peeking_token.token_type, TokenType::integer("5"));
 
         parser.next_token();
-        assert_eq!(parser.current_token, Token::integer("5"));
-        assert_eq!(parser.peeking_token, Token::Semicolon);
+        assert_eq!(parser.current_token.token_type, TokenType::integer("5"));
+        assert_eq!(parser.peeking_token.token_type, TokenType::Semicolon);
     }
 
     #[test]

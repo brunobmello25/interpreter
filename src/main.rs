@@ -2,6 +2,7 @@ use repl::Repl;
 
 mod ast;
 mod lexer;
+mod location;
 mod parser;
 mod repl;
 mod token;

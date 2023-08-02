@@ -1,5 +1,22 @@
+use crate::location::Location;
+
 #[derive(Debug, PartialEq)]
-pub enum Token {
+pub struct Token {
+    pub token_type: TokenType,
+    pub location: Location,
+}
+
+impl Token {
+    pub fn new(token_type: TokenType, location: Location) -> Self {
+        Self {
+            token_type,
+            location,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TokenType {
     Let,
     Identifier(String),
     Assign,
@@ -32,45 +49,50 @@ pub enum Token {
 
 impl Clone for Token {
     fn clone(&self) -> Self {
-        match self {
-            Self::Let => Self::Let,
-            Self::Identifier(identifier) => Self::identifier(identifier),
-            Self::Assign => Self::Assign,
-            Self::Integer(integer) => Self::Integer(integer.clone()),
-            Self::Comma => Self::Comma,
-            Self::Function => Self::Function,
-            Self::LParen => Self::LParen,
-            Self::RParen => Self::RParen,
-            Self::LBrace => Self::LBrace,
-            Self::RBrace => Self::RBrace,
-            Self::Semicolon => Self::Semicolon,
-            Self::Illegal(illegal) => Self::Illegal(illegal.clone()),
-            Self::EOF => Self::EOF,
-            Self::Plus => Self::Plus,
-            Self::Minus => Self::Minus,
-            Self::Bang => Self::Bang,
-            Self::Asterisk => Self::Asterisk,
-            Self::Slash => Self::Slash,
-            Self::LT => Self::LT,
-            Self::GT => Self::GT,
-            Self::True => Self::True,
-            Self::False => Self::False,
-            Self::If => Self::If,
-            Self::Else => Self::Else,
-            Self::Return => Self::Return,
-            Self::Eq => Self::Eq,
-            Self::NotEq => Self::NotEq,
-            Self::Modulo => Self::Modulo,
+        let token_type = match &self.token_type {
+            TokenType::Let => TokenType::Let,
+            TokenType::Identifier(identifier) => TokenType::identifier(identifier),
+            TokenType::Assign => TokenType::Assign,
+            TokenType::Integer(integer) => TokenType::Integer(integer.clone()),
+            TokenType::Comma => TokenType::Comma,
+            TokenType::Function => TokenType::Function,
+            TokenType::LParen => TokenType::LParen,
+            TokenType::RParen => TokenType::RParen,
+            TokenType::LBrace => TokenType::LBrace,
+            TokenType::RBrace => TokenType::RBrace,
+            TokenType::Semicolon => TokenType::Semicolon,
+            TokenType::Illegal(illegal) => TokenType::Illegal(illegal.clone()),
+            TokenType::EOF => TokenType::EOF,
+            TokenType::Plus => TokenType::Plus,
+            TokenType::Minus => TokenType::Minus,
+            TokenType::Bang => TokenType::Bang,
+            TokenType::Asterisk => TokenType::Asterisk,
+            TokenType::Slash => TokenType::Slash,
+            TokenType::LT => TokenType::LT,
+            TokenType::GT => TokenType::GT,
+            TokenType::True => TokenType::True,
+            TokenType::False => TokenType::False,
+            TokenType::If => TokenType::If,
+            TokenType::Else => TokenType::Else,
+            TokenType::Return => TokenType::Return,
+            TokenType::Eq => TokenType::Eq,
+            TokenType::NotEq => TokenType::NotEq,
+            TokenType::Modulo => TokenType::Modulo,
+        };
+
+        Token {
+            token_type,
+            location: self.location.clone(),
         }
     }
 }
 
-impl Token {
-    pub fn identifier(ident: impl Into<String>) -> Token {
-        Token::Identifier(ident.into())
+impl TokenType {
+    pub fn identifier(ident: impl Into<String>) -> TokenType {
+        TokenType::Identifier(ident.into())
     }
 
-    pub fn integer(integer: impl Into<String>) -> Token {
-        Token::Integer(integer.into())
+    pub fn integer(integer: impl Into<String>) -> TokenType {
+        TokenType::Integer(integer.into())
     }
 }
