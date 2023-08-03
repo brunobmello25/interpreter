@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-use crate::parser::ast::{expression::Expression, node::Node, statement::Statement};
+use crate::parser::ast::{
+    expression::Expression, node::Node, operator::PrefixOperator, statement::Statement,
+};
 
 use super::object::Object;
 
@@ -20,7 +22,8 @@ impl Evaluator {
         Evaluator {}
     }
 
-    pub fn eval(&self, node: Node) -> Result<Object, EvaluationError> {
+    pub fn eval(&self, node: impl Into<Node>) -> Result<Object, EvaluationError> {
+        let node = node.into();
         match node {
             Node::Expression(expression) => self.eval_expression(expression),
             Node::Statement(statement) => self.eval_statement(statement),
@@ -57,8 +60,28 @@ impl Evaluator {
             Expression::If { .. } => todo!(),
             Expression::Function { .. } => todo!(),
             Expression::Call { .. } => todo!(),
-            Expression::Prefix { .. } => todo!(),
+            Expression::Prefix { operator, rhs } => self.eval_prefix_expression(operator, *rhs),
             Expression::Infix { .. } => todo!(),
+        }
+    }
+
+    fn eval_prefix_expression(
+        &self,
+        operator: PrefixOperator,
+        rhs: Expression,
+    ) -> Result<Object, EvaluationError> {
+        let rhs = self.eval(Node::Expression(rhs))?;
+        match operator {
+            PrefixOperator::Not => self.eval_bang_operator_expression(rhs),
+            PrefixOperator::Negative => todo!(),
+        }
+    }
+
+    fn eval_bang_operator_expression(&self, rhs: Object) -> Result<Object, EvaluationError> {
+        match rhs {
+            Object::Boolean(boolean) => Ok(Object::Boolean(!boolean)),
+            Object::Null => todo!(),
+            Object::Integer(integer) => Ok(Object::Boolean(integer == 0)),
         }
     }
 }
@@ -72,6 +95,26 @@ mod tests {
     };
 
     use super::Evaluator;
+
+    #[test]
+    // #[ignore]
+    fn test_bang_prefix_expression() {
+        let tests = vec![
+            ("!true", false),
+            ("!5", false),
+            ("!!5", true),
+            ("!!true", true),
+            ("!false", true),
+            ("!!false", false),
+        ];
+        for test in tests {
+            let program = make_program_node(test.0);
+            let evaluator = Evaluator::new();
+            let evaluated = evaluator.eval(program);
+            assert!(evaluated.is_ok());
+            assert_eq!(evaluated.unwrap(), Object::Boolean(test.1));
+        }
+    }
 
     #[test]
     fn test_eval_boolean_expression() {

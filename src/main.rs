@@ -8,5 +8,6 @@ mod repl;
 fn main() {
     println!("Monkey repl! enter empty string to exit");
 
-    Repl::start(std::io::stdin());
+    let repl = Repl::new(std::io::stdin());
+    repl.start();
 }

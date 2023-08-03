@@ -12,14 +12,20 @@ use crate::{
     },
 };
 
-pub struct Repl {}
+pub struct Repl {
+    stdin: Stdin,
+}
 
 const PROMPT: &'static str = ">> ";
 
 impl Repl {
-    pub fn start(stdin: Stdin) {
+    pub fn new(stdin: Stdin) -> Self {
+        Repl { stdin }
+    }
+
+    pub fn start(&self) {
         let mut line = String::new();
-        Self::read_input(&mut line, &stdin);
+        self.read_input(&mut line, &self.stdin);
 
         while !line.trim().is_empty() {
             let lexer = Lexer::new(&line);
@@ -27,7 +33,7 @@ impl Repl {
             let program = parser.parse_program();
 
             if parser.errors.len() == 0 {
-                match Self::evaluate_program(program) {
+                match self.evaluate_program(program) {
                     Ok(object) => println!("{}", object),
                     Err(err) => println!("{}", err),
                 }
@@ -38,17 +44,24 @@ impl Repl {
                 }
             }
 
-            Self::read_input(&mut line, &stdin);
+            self.read_input(&mut line, &self.stdin);
         }
     }
 
-    fn evaluate_program(program: Program) -> Result<Object, EvaluationError> {
+    fn evaluate_program(&self, program: Program) -> Result<Object, EvaluationError> {
         let evaluator = Evaluator::new();
 
         evaluator.eval(Node::Program(program))
     }
 
-    fn read_input(input: &mut String, stdin: &Stdin) {
+    #[allow(dead_code)]
+    fn print_program(&self, program: Program) {
+        for statement in program.statements {
+            println!("{:?}", statement);
+        }
+    }
+
+    fn read_input(&self, input: &mut String, stdin: &Stdin) {
         input.clear();
         print!("{PROMPT}");
         io::stdout().flush().expect("failed to flush stdout");
