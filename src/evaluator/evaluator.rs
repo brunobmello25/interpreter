@@ -46,7 +46,14 @@ impl Evaluator {
         let mut result: Option<Object> = None;
 
         for statement in statements {
-            result = Some(self.eval(statement)?);
+            let evaluated = self.eval(statement)?;
+
+            match evaluated {
+                Object::ReturnValue(_) => return Ok(evaluated),
+                _ => {}
+            }
+
+            result = Some(evaluated);
         }
 
         match result {
@@ -58,7 +65,10 @@ impl Evaluator {
     fn eval_statement(&self, statement: Statement) -> Result<Object, EvaluationError> {
         match statement {
             Statement::Let { .. } => todo!(),
-            Statement::Return { .. } => todo!(),
+            Statement::Return { value } => {
+                let value = self.eval(value)?;
+                Ok(Object::return_value(value))
+            }
             Statement::Expression(expression) => self.eval(expression),
         }
     }
@@ -198,6 +208,29 @@ mod tests {
     };
 
     use super::Evaluator;
+
+    #[test]
+    fn test_return_statements() {
+        let tests = vec![
+            ("return 10;", Object::return_value(Object::Integer(10))),
+            ("return 10; 9;", Object::return_value(Object::Integer(10))),
+            (
+                "return 2 * 5; 9;",
+                Object::return_value(Object::Integer(10)),
+            ),
+            (
+                "9; return 2 * 5; 9;",
+                Object::return_value(Object::Integer(10)),
+            ),
+        ];
+        for test in tests {
+            let program = make_program_node(test.0);
+            let evaluator = Evaluator::new();
+            let evaluated = evaluator.eval(program);
+            assert!(evaluated.is_ok());
+            assert_eq!(evaluated.unwrap(), test.1);
+        }
+    }
 
     #[test]
     fn test_if_else_expressions() {

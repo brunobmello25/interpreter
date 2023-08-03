@@ -8,6 +8,12 @@ pub enum Object {
     Null,
 }
 
+impl Object {
+    pub fn return_value(value: Object) -> Self {
+        Object::ReturnValue(Box::new(value))
+    }
+}
+
 impl Display for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
