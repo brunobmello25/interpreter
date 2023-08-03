@@ -1,6 +1,9 @@
 use std::io::{self, Stdin, Write};
 
-use crate::{ast::program::Program, lexer::Lexer, parser::parser::Parser};
+use crate::{
+    lexer::lexer::Lexer,
+    parser::{ast::program::Program, parser::Parser},
+};
 
 pub struct Repl {}
 

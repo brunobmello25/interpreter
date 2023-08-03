@@ -1,17 +1,22 @@
 use std::fmt::Display;
 
 use crate::{
+    expect_peek,
+    lexer::{
+        lexer::Lexer,
+        location::Location,
+        token::{Token, TokenType},
+    },
+};
+
+use super::{
     ast::{
         expression::Expression,
         operator::{InfixOperator, PrefixOperator},
         program::Program,
         statement::Statement,
     },
-    expect_peek,
-    lexer::Lexer,
-    location::Location,
-    parser::precedence::Precedence,
-    token::{Token, TokenType},
+    precedence::Precedence,
 };
 
 pub struct ParserError {
@@ -354,13 +359,12 @@ mod tests {
     use indoc::indoc;
 
     use crate::{
-        ast::{
+        lexer::{lexer::Lexer, token::TokenType},
+        parser::ast::{
             expression::Expression,
             operator::{InfixOperator, PrefixOperator},
             statement::Statement,
         },
-        lexer::Lexer,
-        token::TokenType,
     };
 
     use super::Parser;

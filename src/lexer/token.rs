@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::location::Location;
+use super::location::Location;
 
 #[derive(Debug, PartialEq)]
 pub struct Token {

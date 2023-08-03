@@ -1,7 +1,8 @@
-use crate::location::Location;
-use crate::token::{Token, TokenType};
 use std::iter::Peekable;
 use std::str::Chars;
+
+use super::location::Location;
+use super::token::{Token, TokenType};
 
 pub struct Lexer<'a> {
     chars: Peekable<Chars<'a>>,
@@ -160,8 +161,6 @@ impl<'a> Lexer<'a> {
 #[cfg(test)]
 mod tests {
     use indoc::indoc;
-
-    use crate::token::TokenType;
 
     use super::*;
 
