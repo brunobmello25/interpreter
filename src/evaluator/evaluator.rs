@@ -103,7 +103,7 @@ impl Evaluator {
         match object {
             Object::Integer(integer) => integer != 0,
             Object::Boolean(boolean) => boolean,
-            Object::Null => false,
+            x => todo!(),
         }
     }
 
@@ -172,8 +172,8 @@ impl Evaluator {
     fn eval_bang_operator_prefix_expression(&self, rhs: Object) -> Result<Object, EvaluationError> {
         match rhs {
             Object::Boolean(boolean) => Ok(Object::Boolean(!boolean)),
-            Object::Null => todo!(),
             Object::Integer(integer) => Ok(Object::Boolean(integer == 0)),
+            x => todo!(),
         }
     }
 
@@ -184,7 +184,7 @@ impl Evaluator {
         match rhs {
             Object::Integer(integer) => Ok(Object::Integer(-integer)),
             Object::Boolean(_) => Ok(Object::Null),
-            Object::Null => todo!(),
+            x => todo!(),
         }
     }
 }
