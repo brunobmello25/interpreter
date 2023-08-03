@@ -68,13 +68,42 @@ impl Evaluator {
             Expression::Int(int) => Ok(Object::Integer(int)),
             Expression::Bool(boolean) => Ok(Object::Boolean(boolean)),
             Expression::Identifier(_) => todo!(),
-            Expression::If { .. } => todo!(),
+            Expression::If {
+                condition,
+                consequence,
+                alternative,
+            } => self.eval_if_expression(*condition, consequence, alternative),
             Expression::Function { .. } => todo!(),
             Expression::Call { .. } => todo!(),
             Expression::Prefix { operator, rhs } => self.eval_prefix_expression(operator, *rhs),
             Expression::Infix { rhs, operator, lhs } => {
                 self.eval_infix_expression(operator, *lhs, *rhs)
             }
+        }
+    }
+
+    fn eval_if_expression(
+        &self,
+        condition: Expression,
+        consequence: Vec<Statement>,
+        alternative: Option<Vec<Statement>>,
+    ) -> Result<Object, EvaluationError> {
+        let condition = self.eval(condition)?;
+
+        if self.is_truthy(condition) {
+            self.eval_statements(consequence)
+        } else if let Some(alternative) = alternative {
+            self.eval_statements(alternative)
+        } else {
+            Ok(Object::Null)
+        }
+    }
+
+    fn is_truthy(&self, object: Object) -> bool {
+        match object {
+            Object::Integer(integer) => integer != 0,
+            Object::Boolean(boolean) => boolean,
+            Object::Null => false,
         }
     }
 
@@ -169,6 +198,26 @@ mod tests {
     };
 
     use super::Evaluator;
+
+    #[test]
+    fn test_if_else_expressions() {
+        let tests = vec![
+            ("if (true) { 10 }", Object::Integer(10)),
+            ("if (false) { 10 }", Object::Null),
+            ("if (1) { 10 }", Object::Integer(10)),
+            ("if (1 < 2) { 10 }", Object::Integer(10)),
+            ("if (1 > 2) { 10 }", Object::Null),
+            ("if (1 > 2) { 10 } else { 20 }", Object::Integer(20)),
+            ("if (1 < 2) { 10 } else { 20 }", Object::Integer(10)),
+        ];
+        for test in tests {
+            let program = make_program_node(test.0);
+            let evaluator = Evaluator::new();
+            let evaluated = evaluator.eval(program);
+            assert!(evaluated.is_ok());
+            assert_eq!(evaluated.unwrap(), test.1);
+        }
+    }
 
     #[test]
     // #[ignore]
