@@ -1,11 +1,19 @@
+use std::fmt::Display;
+
 use crate::parser::ast::{expression::Expression, node::Node, statement::Statement};
 
 use super::object::Object;
 
 #[derive(Debug)]
-struct EvaluationError {}
+pub struct EvaluationError {}
 
-struct Evaluator {}
+impl Display for EvaluationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", "evaluation error")
+    }
+}
+
+pub struct Evaluator {}
 
 impl Evaluator {
     pub fn new() -> Self {

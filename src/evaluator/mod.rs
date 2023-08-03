@@ -1,2 +1,2 @@
 pub mod evaluator;
-mod object;
+pub mod object;
