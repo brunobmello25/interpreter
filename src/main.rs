@@ -1,5 +1,6 @@
 use repl::Repl;
 
+mod evaluator;
 mod lexer;
 mod parser;
 mod repl;
