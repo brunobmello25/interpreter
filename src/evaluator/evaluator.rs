@@ -52,7 +52,7 @@ impl Evaluator {
     fn eval_expression(&self, expression: Expression) -> Result<Object, EvaluationError> {
         match expression {
             Expression::Int(int) => Ok(Object::Integer(int)),
-            Expression::Bool(_) => todo!(),
+            Expression::Bool(boolean) => Ok(Object::Boolean(boolean)),
             Expression::Identifier(_) => todo!(),
             Expression::If { .. } => todo!(),
             Expression::Function { .. } => todo!(),
@@ -72,6 +72,18 @@ mod tests {
     };
 
     use super::Evaluator;
+
+    #[test]
+    fn test_eval_boolean_expression() {
+        let tests = vec![("true", true), ("false", false)];
+        for test in tests {
+            let program = make_program_node(test.0);
+            let evaluator = Evaluator::new();
+            let evaluated = evaluator.eval(program);
+            assert!(evaluated.is_ok());
+            assert_eq!(evaluated.unwrap(), Object::Boolean(test.1));
+        }
+    }
 
     #[test]
     fn test_eval_integer_expression() {
