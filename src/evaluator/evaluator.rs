@@ -1,13 +1,24 @@
-use std::fmt::Display;
+use std::{fmt::Display, result};
 
 use crate::parser::ast::{
-    expression::Expression, node::Node, operator::PrefixOperator, statement::Statement,
+    expression::Expression,
+    node::Node,
+    operator::{InfixOperator, PrefixOperator},
+    statement::Statement,
 };
 
 use super::object::Object;
 
 #[derive(Debug)]
-pub struct EvaluationError {}
+pub struct EvaluationError {
+    msg: String,
+}
+
+impl EvaluationError {
+    pub fn new(msg: impl Into<String>) -> Self {
+        EvaluationError { msg: msg.into() }
+    }
+}
 
 impl Display for EvaluationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -35,12 +46,12 @@ impl Evaluator {
         let mut result: Option<Object> = None;
 
         for statement in statements {
-            result = Some(self.eval(Node::Statement(statement))?);
+            result = Some(self.eval(statement)?);
         }
 
         match result {
             Some(object) => Ok(object),
-            None => Err(EvaluationError {}),
+            None => Err(EvaluationError::new("program did not have any statements")),
         }
     }
 
@@ -48,7 +59,7 @@ impl Evaluator {
         match statement {
             Statement::Let { .. } => todo!(),
             Statement::Return { .. } => todo!(),
-            Statement::Expression(expression) => self.eval(Node::Expression(expression)),
+            Statement::Expression(expression) => self.eval(expression),
         }
     }
 
@@ -61,7 +72,9 @@ impl Evaluator {
             Expression::Function { .. } => todo!(),
             Expression::Call { .. } => todo!(),
             Expression::Prefix { operator, rhs } => self.eval_prefix_expression(operator, *rhs),
-            Expression::Infix { .. } => todo!(),
+            Expression::Infix { rhs, operator, lhs } => {
+                self.eval_infix_expression(operator, *lhs, *rhs)
+            }
         }
     }
 
@@ -70,18 +83,134 @@ impl Evaluator {
         operator: PrefixOperator,
         rhs: Expression,
     ) -> Result<Object, EvaluationError> {
-        let rhs = self.eval(Node::Expression(rhs))?;
+        let rhs = self.eval(rhs)?;
         match operator {
-            PrefixOperator::Not => self.eval_bang_operator_expression(rhs),
-            PrefixOperator::Negative => todo!(),
+            PrefixOperator::Not => self.eval_bang_operator_prefix_expression(rhs),
+            PrefixOperator::Negative => self.eval_negative_operator_prefix_expression(rhs),
         }
     }
 
-    fn eval_bang_operator_expression(&self, rhs: Object) -> Result<Object, EvaluationError> {
+    fn eval_infix_expression(
+        &self,
+        operator: InfixOperator,
+        lhs: Expression,
+        rhs: Expression,
+    ) -> Result<Object, EvaluationError> {
+        let lhs = self.eval(lhs)?;
+        let rhs = self.eval(rhs)?;
+
+        match (operator, lhs, rhs) {
+            (InfixOperator::Add, Object::Integer(int1), Object::Integer(int2)) => {
+                Ok(Object::Integer(int1 + int2))
+            }
+            (InfixOperator::Add, Object::Integer(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Add, Object::Integer(_), Object::Null) => todo!(),
+            (InfixOperator::Add, Object::Boolean(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::Add, Object::Boolean(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Add, Object::Boolean(_), Object::Null) => todo!(),
+            (InfixOperator::Add, Object::Null, Object::Integer(_)) => todo!(),
+            (InfixOperator::Add, Object::Null, Object::Boolean(_)) => todo!(),
+            (InfixOperator::Add, Object::Null, Object::Null) => todo!(),
+            (InfixOperator::Sub, Object::Integer(int1), Object::Integer(int2)) => {
+                Ok(Object::Integer(int1 - int2))
+            }
+            (InfixOperator::Sub, Object::Integer(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Sub, Object::Integer(_), Object::Null) => todo!(),
+            (InfixOperator::Sub, Object::Boolean(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::Sub, Object::Boolean(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Sub, Object::Boolean(_), Object::Null) => todo!(),
+            (InfixOperator::Sub, Object::Null, Object::Integer(_)) => todo!(),
+            (InfixOperator::Sub, Object::Null, Object::Boolean(_)) => todo!(),
+            (InfixOperator::Sub, Object::Null, Object::Null) => todo!(),
+            (InfixOperator::Mult, Object::Integer(int1), Object::Integer(int2)) => {
+                Ok(Object::Integer(int1 * int2))
+            }
+            (InfixOperator::Mult, Object::Integer(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Mult, Object::Integer(_), Object::Null) => todo!(),
+            (InfixOperator::Mult, Object::Boolean(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::Mult, Object::Boolean(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Mult, Object::Boolean(_), Object::Null) => todo!(),
+            (InfixOperator::Mult, Object::Null, Object::Integer(_)) => todo!(),
+            (InfixOperator::Mult, Object::Null, Object::Boolean(_)) => todo!(),
+            (InfixOperator::Mult, Object::Null, Object::Null) => todo!(),
+            (InfixOperator::Div, Object::Integer(int1), Object::Integer(int2)) => {
+                if int2 == 0 {
+                    return Err(EvaluationError::new("cannot divide by zero"));
+                }
+                Ok(Object::Integer(int1 / int2))
+            }
+            (InfixOperator::Div, Object::Integer(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Div, Object::Integer(_), Object::Null) => todo!(),
+            (InfixOperator::Div, Object::Boolean(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::Div, Object::Boolean(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Div, Object::Boolean(_), Object::Null) => todo!(),
+            (InfixOperator::Div, Object::Null, Object::Integer(_)) => todo!(),
+            (InfixOperator::Div, Object::Null, Object::Boolean(_)) => todo!(),
+            (InfixOperator::Div, Object::Null, Object::Null) => todo!(),
+            (InfixOperator::Modulo, Object::Integer(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::Modulo, Object::Integer(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Modulo, Object::Integer(_), Object::Null) => todo!(),
+            (InfixOperator::Modulo, Object::Boolean(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::Modulo, Object::Boolean(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Modulo, Object::Boolean(_), Object::Null) => todo!(),
+            (InfixOperator::Modulo, Object::Null, Object::Integer(_)) => todo!(),
+            (InfixOperator::Modulo, Object::Null, Object::Boolean(_)) => todo!(),
+            (InfixOperator::Modulo, Object::Null, Object::Null) => todo!(),
+            (InfixOperator::Equal, Object::Integer(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::Equal, Object::Integer(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Equal, Object::Integer(_), Object::Null) => todo!(),
+            (InfixOperator::Equal, Object::Boolean(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::Equal, Object::Boolean(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::Equal, Object::Boolean(_), Object::Null) => todo!(),
+            (InfixOperator::Equal, Object::Null, Object::Integer(_)) => todo!(),
+            (InfixOperator::Equal, Object::Null, Object::Boolean(_)) => todo!(),
+            (InfixOperator::Equal, Object::Null, Object::Null) => todo!(),
+            (InfixOperator::NotEqual, Object::Integer(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::NotEqual, Object::Integer(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::NotEqual, Object::Integer(_), Object::Null) => todo!(),
+            (InfixOperator::NotEqual, Object::Boolean(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::NotEqual, Object::Boolean(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::NotEqual, Object::Boolean(_), Object::Null) => todo!(),
+            (InfixOperator::NotEqual, Object::Null, Object::Integer(_)) => todo!(),
+            (InfixOperator::NotEqual, Object::Null, Object::Boolean(_)) => todo!(),
+            (InfixOperator::NotEqual, Object::Null, Object::Null) => todo!(),
+            (InfixOperator::GreaterThan, Object::Integer(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::GreaterThan, Object::Integer(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::GreaterThan, Object::Integer(_), Object::Null) => todo!(),
+            (InfixOperator::GreaterThan, Object::Boolean(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::GreaterThan, Object::Boolean(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::GreaterThan, Object::Boolean(_), Object::Null) => todo!(),
+            (InfixOperator::GreaterThan, Object::Null, Object::Integer(_)) => todo!(),
+            (InfixOperator::GreaterThan, Object::Null, Object::Boolean(_)) => todo!(),
+            (InfixOperator::GreaterThan, Object::Null, Object::Null) => todo!(),
+            (InfixOperator::LessThan, Object::Integer(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::LessThan, Object::Integer(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::LessThan, Object::Integer(_), Object::Null) => todo!(),
+            (InfixOperator::LessThan, Object::Boolean(_), Object::Integer(_)) => todo!(),
+            (InfixOperator::LessThan, Object::Boolean(_), Object::Boolean(_)) => todo!(),
+            (InfixOperator::LessThan, Object::Boolean(_), Object::Null) => todo!(),
+            (InfixOperator::LessThan, Object::Null, Object::Integer(_)) => todo!(),
+            (InfixOperator::LessThan, Object::Null, Object::Boolean(_)) => todo!(),
+            (InfixOperator::LessThan, Object::Null, Object::Null) => todo!(),
+        }
+    }
+
+    fn eval_bang_operator_prefix_expression(&self, rhs: Object) -> Result<Object, EvaluationError> {
         match rhs {
             Object::Boolean(boolean) => Ok(Object::Boolean(!boolean)),
             Object::Null => todo!(),
             Object::Integer(integer) => Ok(Object::Boolean(integer == 0)),
+        }
+    }
+
+    fn eval_negative_operator_prefix_expression(
+        &self,
+        rhs: Object,
+    ) -> Result<Object, EvaluationError> {
+        match rhs {
+            Object::Integer(integer) => Ok(Object::Integer(-integer)),
+            Object::Boolean(_) => Ok(Object::Null),
+            Object::Null => todo!(),
         }
     }
 }
@@ -130,13 +259,35 @@ mod tests {
 
     #[test]
     fn test_eval_integer_expression() {
-        let tests = vec![("5", 5), ("10", 10)];
+        let tests = vec![
+            ("5", Object::Integer(5)),
+            ("10", Object::Integer(10)),
+            ("-5", Object::Integer(-5)),
+            ("-10", Object::Integer(-10)),
+            ("-true", Object::Null),
+            ("-false", Object::Null),
+            ("5", Object::Integer(5)),
+            ("10", Object::Integer(10)),
+            ("-5", Object::Integer(-5)),
+            ("-10", Object::Integer(-10)),
+            ("5 + 5 + 5 + 5 - 10", Object::Integer(10)),
+            ("2 * 2 * 2 * 2 * 2", Object::Integer(32)),
+            ("-50 + 100 + -50", Object::Integer(0)),
+            ("5 * 2 + 10", Object::Integer(20)),
+            ("5 + 2 * 10", Object::Integer(25)),
+            ("20 + 2 * -10", Object::Integer(0)),
+            ("50 / 2 * 2 + 10", Object::Integer(60)),
+            ("2 * (5 + 10)", Object::Integer(30)),
+            ("3 * 3 * 3 + 10", Object::Integer(37)),
+            ("3 * (3 * 3) + 10", Object::Integer(37)),
+            ("(5 + 10 * 2 + 15 / 3) * 2 + -10", Object::Integer(50)),
+        ];
         for test in tests {
             let program = make_program_node(test.0);
             let evaluator = Evaluator::new();
             let evaluated = evaluator.eval(program);
             assert!(evaluated.is_ok());
-            assert_eq!(evaluated.unwrap(), Object::Integer(test.1));
+            assert_eq!(evaluated.unwrap(), test.1);
         }
     }
 
