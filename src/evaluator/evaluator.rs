@@ -7,7 +7,7 @@ use crate::parser::ast::{
     statement::Statement,
 };
 
-use super::object::Object;
+use super::{environment::Environment, object::Object};
 
 #[derive(Debug)]
 pub struct EvaluationError {
@@ -26,14 +26,16 @@ impl Display for EvaluationError {
     }
 }
 
-pub struct Evaluator {}
+pub struct Evaluator<'a> {
+    environment: &'a mut Environment,
+}
 
-impl Evaluator {
-    pub fn new() -> Self {
-        Evaluator {}
+impl<'a> Evaluator<'a> {
+    pub fn new(environment: &'a mut Environment) -> Self {
+        Evaluator { environment }
     }
 
-    pub fn eval(&self, node: impl Into<Node>) -> Result<Object, EvaluationError> {
+    pub fn eval(&mut self, node: impl Into<Node>) -> Result<Object, EvaluationError> {
         let node = node.into();
         match node {
             Node::Expression(expression) => self.eval_expression(expression),
@@ -42,7 +44,7 @@ impl Evaluator {
         }
     }
 
-    fn eval_statements(&self, statements: Vec<Statement>) -> Result<Object, EvaluationError> {
+    fn eval_statements(&mut self, statements: Vec<Statement>) -> Result<Object, EvaluationError> {
         let mut result: Option<Object> = None;
 
         for statement in statements {
@@ -58,9 +60,9 @@ impl Evaluator {
         Ok(result.unwrap_or(Object::Null))
     }
 
-    fn eval_statement(&self, statement: Statement) -> Result<Object, EvaluationError> {
+    fn eval_statement(&mut self, statement: Statement) -> Result<Object, EvaluationError> {
         match statement {
-            Statement::Let { .. } => todo!(),
+            Statement::Let { name, value } => self.eval_let_statement(name, value),
             Statement::Return { value } => {
                 let value = self.eval(value)?;
                 Ok(Object::return_value(value))
@@ -69,11 +71,23 @@ impl Evaluator {
         }
     }
 
-    fn eval_expression(&self, expression: Expression) -> Result<Object, EvaluationError> {
+    fn eval_let_statement(
+        &mut self,
+        name: String,
+        value: Expression,
+    ) -> Result<Object, EvaluationError> {
+        let value = self.eval(value)?;
+
+        self.environment.set(&name, value.clone());
+
+        Ok(value)
+    }
+
+    fn eval_expression(&mut self, expression: Expression) -> Result<Object, EvaluationError> {
         match expression {
             Expression::Int(int) => Ok(Object::Integer(int)),
             Expression::Bool(boolean) => Ok(Object::Boolean(boolean)),
-            Expression::Identifier(_) => todo!(),
+            Expression::Identifier(identifier) => self.eval_identifier(identifier),
             Expression::If {
                 condition,
                 consequence,
@@ -90,7 +104,7 @@ impl Evaluator {
     }
 
     fn eval_if_expression(
-        &self,
+        &mut self,
         condition: Expression,
         consequence: Vec<Statement>,
         alternative: Option<Vec<Statement>>,
@@ -106,17 +120,27 @@ impl Evaluator {
         }
     }
 
+    fn eval_identifier(&mut self, identifier: String) -> Result<Object, EvaluationError> {
+        match self.environment.get(&identifier) {
+            Some(object) => Ok(object),
+            None => Err(EvaluationError::new(format!(
+                "identifier not found: {}",
+                identifier
+            ))),
+        }
+    }
+
     fn is_truthy(&self, object: Object) -> bool {
         match object {
             Object::Integer(integer) => integer != 0,
             Object::Boolean(boolean) => boolean,
             Object::Null => false,
-            Object::ReturnValue(_) => todo!(),
+            Object::ReturnValue(value) => self.is_truthy(*value),
         }
     }
 
     fn eval_prefix_expression(
-        &self,
+        &mut self,
         operator: PrefixOperator,
         rhs: Expression,
     ) -> Result<Object, EvaluationError> {
@@ -128,7 +152,7 @@ impl Evaluator {
     }
 
     fn eval_infix_expression(
-        &self,
+        &mut self,
         operator: InfixOperator,
         lhs: Expression,
         rhs: Expression,
@@ -186,7 +210,7 @@ impl Evaluator {
         match rhs {
             Object::Boolean(boolean) => Ok(Object::Boolean(!boolean)),
             Object::Integer(integer) => Ok(Object::Boolean(integer == 0)),
-            _ => todo!(),
+            x => Err(EvaluationError::new(format!("invalid operation: !{}", x))),
         }
     }
 
@@ -206,12 +230,40 @@ mod tests {
     use indoc::indoc;
 
     use crate::{
-        evaluator::object::Object,
+        evaluator::{environment::Environment, object::Object},
         lexer::lexer::Lexer,
-        parser::{ast::node::Node, parser::Parser},
+        parser::parser::Parser,
     };
 
-    use super::Evaluator;
+    use super::{EvaluationError, Evaluator};
+
+    #[test]
+    fn test_eval_not_null() {
+        let evaluated = evaluate("!null");
+        assert_eq!(evaluated.unwrap_err().msg, "invalid operation: !null");
+    }
+
+    #[test]
+    fn test_identifier_not_found() {
+        let evaluated = evaluate("foobar");
+        assert_eq!(evaluated.unwrap_err().msg, "identifier not found: foobar");
+    }
+
+    #[test]
+    fn test_let_statements() {
+        let tests = vec![
+            ("let a = 5; a;", 5),
+            ("let a = 5 * 5; a;", 25),
+            ("let a = 5; let b = a; b;", 5),
+            ("let a = 5; let b = a; a;", 5),
+            ("let a = 5; let b = a; let c = a + b + 5; c;", 15),
+        ];
+        for test in tests {
+            let evaluated = evaluate(test.0);
+            assert!(evaluated.is_ok());
+            assert_eq!(evaluated.unwrap(), Object::Integer(test.1));
+        }
+    }
 
     #[test]
     fn test_error_handling() {
@@ -239,9 +291,7 @@ mod tests {
             ),
         ];
         for test in tests {
-            let program = make_program_node(test.0);
-            let evaluator = Evaluator::new();
-            let evaluated = evaluator.eval(program);
+            let evaluated = evaluate(test.0);
             assert!(evaluated.is_err());
             assert_eq!(evaluated.unwrap_err().msg, test.1);
         }
@@ -262,9 +312,7 @@ mod tests {
             ),
         ];
         for test in tests {
-            let program = make_program_node(test.0);
-            let evaluator = Evaluator::new();
-            let evaluated = evaluator.eval(program);
+            let evaluated = evaluate(test.0);
             assert!(evaluated.is_ok());
             assert_eq!(evaluated.unwrap(), test.1);
         }
@@ -293,9 +341,7 @@ mod tests {
             ),
         ];
         for test in tests {
-            let program = make_program_node(test.0);
-            let evaluator = Evaluator::new();
-            let evaluated = evaluator.eval(program);
+            let evaluated = evaluate(test.0);
             assert!(evaluated.is_ok());
             assert_eq!(evaluated.unwrap(), test.1);
         }
@@ -312,9 +358,7 @@ mod tests {
             ("!!false", false),
         ];
         for test in tests {
-            let program = make_program_node(test.0);
-            let evaluator = Evaluator::new();
-            let evaluated = evaluator.eval(program);
+            let evaluated = evaluate(test.0);
             assert!(evaluated.is_ok());
             assert_eq!(evaluated.unwrap(), Object::Boolean(test.1));
         }
@@ -324,9 +368,7 @@ mod tests {
     fn test_eval_modulo() {
         let tests = vec![("10 % 2", 0), ("2 % 3", 2), ("5 % 2", 1)];
         for test in tests {
-            let program = make_program_node(test.0);
-            let evaluator = Evaluator::new();
-            let evaluated = evaluator.eval(program);
+            let evaluated = evaluate(test.0);
             assert!(evaluated.is_ok());
             assert_eq!(evaluated.unwrap(), Object::Integer(test.1));
         }
@@ -358,9 +400,7 @@ mod tests {
             ("(1 > 2) == false", true),
         ];
         for test in tests {
-            let program = make_program_node(test.0);
-            let evaluator = Evaluator::new();
-            let evaluated = evaluator.eval(program);
+            let evaluated = evaluate(test.0);
             assert!(evaluated.is_ok());
             assert_eq!(evaluated.unwrap(), Object::Boolean(test.1));
         }
@@ -390,18 +430,18 @@ mod tests {
             ("(5 + 10 * 2 + 15 / 3) * 2 + -10", Object::Integer(50)),
         ];
         for test in tests {
-            let program = make_program_node(test.0);
-            let evaluator = Evaluator::new();
-            let evaluated = evaluator.eval(program);
+            let evaluated = evaluate(test.0);
             assert!(evaluated.is_ok());
             assert_eq!(evaluated.unwrap(), test.1);
         }
     }
 
-    fn make_program_node(input: &str) -> Node {
+    fn evaluate(input: &str) -> Result<Object, EvaluationError> {
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
         let program = parser.parse_program();
-        return Node::Program(program);
+        let mut environment = Environment::new();
+        let mut evaluator = Evaluator::new(&mut environment);
+        evaluator.eval(program)
     }
 }

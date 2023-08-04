@@ -2,6 +2,7 @@ use std::io::{self, Stdin, Write};
 
 use crate::{
     evaluator::{
+        environment::Environment,
         evaluator::{EvaluationError, Evaluator},
         object::Object,
     },
@@ -49,7 +50,8 @@ impl Repl {
     }
 
     fn evaluate_program(&self, program: Program) -> Result<Object, EvaluationError> {
-        let evaluator = Evaluator::new();
+        let mut environment = Environment::new();
+        let mut evaluator = Evaluator::new(&mut environment);
 
         evaluator.eval(Node::Program(program))
     }
