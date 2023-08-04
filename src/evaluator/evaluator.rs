@@ -4,7 +4,6 @@ use crate::parser::ast::{
     expression::Expression,
     node::Node,
     operator::{InfixOperator, PrefixOperator},
-    program::Program,
     statement::Statement,
 };
 
@@ -135,7 +134,7 @@ impl Evaluator {
         let lhs = self.eval(lhs)?;
         let rhs = self.eval(rhs)?;
 
-        match (operator, lhs, rhs) {
+        match (&operator, &lhs, &rhs) {
             (InfixOperator::Add, Object::Integer(int1), Object::Integer(int2)) => {
                 Ok(Object::Integer(int1 + int2))
             }
@@ -146,7 +145,7 @@ impl Evaluator {
                 Ok(Object::Integer(int1 * int2))
             }
             (InfixOperator::Div, Object::Integer(int1), Object::Integer(int2)) => {
-                if int2 == 0 {
+                if *int2 == 0 {
                     return Err(EvaluationError::new("cannot divide by zero"));
                 }
                 Ok(Object::Integer(int1 / int2))
@@ -172,7 +171,12 @@ impl Evaluator {
             (InfixOperator::NotEqual, Object::Boolean(bool1), Object::Boolean(bool2)) => {
                 Ok(Object::Boolean(bool1 != bool2))
             }
-            x => todo!("need to implement infix operator for {:?}", x),
+            _ => {
+                return Err(EvaluationError::new(format!(
+                    "invalid operation: {} {} {}",
+                    lhs, operator, rhs
+                )))
+            }
         }
     }
 
@@ -190,8 +194,7 @@ impl Evaluator {
     ) -> Result<Object, EvaluationError> {
         match rhs {
             Object::Integer(integer) => Ok(Object::Integer(-integer)),
-            Object::Boolean(_) => Ok(Object::Null),
-            x => todo!(),
+            x => Err(EvaluationError::new(format!("invalid operation: -{}", x))),
         }
     }
 }
@@ -207,6 +210,40 @@ mod tests {
     };
 
     use super::Evaluator;
+
+    #[test]
+    fn test_error_handling() {
+        let tests = vec![
+            ("5 + true;", "invalid operation: 5 + true"),
+            ("false + 5;", "invalid operation: false + 5"),
+            ("5 + true; 5;", "invalid operation: 5 + true"),
+            ("-true", "invalid operation: -true"),
+            ("true + false;", "invalid operation: true + false"),
+            ("5; true + false; 5", "invalid operation: true + false"),
+            (
+                "if (10 > 1) { true + false; }",
+                "invalid operation: true + false",
+            ),
+            (
+                indoc! {"
+                    if (10 > 1) {
+                        if (10 > 1) {
+                            return true + false;
+                        }
+                        return 1;
+                    }
+                "},
+                "invalid operation: true + false",
+            ),
+        ];
+        for test in tests {
+            let program = make_program_node(test.0);
+            let evaluator = Evaluator::new();
+            let evaluated = evaluator.eval(program);
+            assert!(evaluated.is_err());
+            assert_eq!(evaluated.unwrap_err().msg, test.1);
+        }
+    }
 
     #[test]
     fn test_return_statements() {
@@ -334,8 +371,6 @@ mod tests {
             ("10", Object::Integer(10)),
             ("-5", Object::Integer(-5)),
             ("-10", Object::Integer(-10)),
-            ("-true", Object::Null),
-            ("-false", Object::Null),
             ("5", Object::Integer(5)),
             ("10", Object::Integer(10)),
             ("-5", Object::Integer(-5)),
