@@ -85,6 +85,7 @@ impl Evaluator {
             Expression::Infix { rhs, operator, lhs } => {
                 self.eval_infix_expression(operator, *lhs, *rhs)
             }
+            Expression::Null => Ok(Object::Null),
         }
     }
 
@@ -109,7 +110,8 @@ impl Evaluator {
         match object {
             Object::Integer(integer) => integer != 0,
             Object::Boolean(boolean) => boolean,
-            _ => todo!(),
+            Object::Null => false,
+            Object::ReturnValue(_) => todo!(),
         }
     }
 
@@ -184,7 +186,7 @@ impl Evaluator {
         match rhs {
             Object::Boolean(boolean) => Ok(Object::Boolean(!boolean)),
             Object::Integer(integer) => Ok(Object::Boolean(integer == 0)),
-            x => todo!(),
+            _ => todo!(),
         }
     }
 

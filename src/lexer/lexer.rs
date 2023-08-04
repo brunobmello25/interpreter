@@ -73,6 +73,7 @@ impl<'a> Lexer<'a> {
                     "if" => TokenType::If,
                     "else" => TokenType::Else,
                     "return" => TokenType::Return,
+                    "null" => TokenType::Null,
                     _ => TokenType::identifier(word),
                 };
 
@@ -350,6 +351,7 @@ mod tests {
             10 == 10;
             10 != 9;
             10 % 3;
+            x == null;
         "});
 
         let expected_token_types = vec![
@@ -429,6 +431,10 @@ mod tests {
             TokenType::integer("10"),
             TokenType::Modulo,
             TokenType::integer("3"),
+            TokenType::Semicolon,
+            TokenType::identifier("x"),
+            TokenType::Eq,
+            TokenType::Null,
             TokenType::Semicolon,
             TokenType::EOF,
         ];

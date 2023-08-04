@@ -132,6 +132,7 @@ impl<'a> Parser<'a> {
             TokenType::Bang | TokenType::Minus => self.parse_prefix_expression(),
             TokenType::If => self.parse_if_expression(),
             TokenType::Function => self.parse_function_literal(),
+            TokenType::Null => Ok(Expression::Null),
             token_type => Err(ParserError::new(
                 format!("Expected prefix expression, got {:?}", token_type),
                 &self.current_token.location,
@@ -731,6 +732,35 @@ mod tests {
         assert_eq!(
             program.statements[1],
             Statement::expression(Expression::Int(456))
+        );
+    }
+
+    #[test]
+    fn test_parse_null() {
+        let mut parser = make_parser(indoc! {"
+            null;
+            let x = null;
+            x == null;
+        "});
+        let program = parser.parse_program();
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 3);
+        assert_eq!(
+            program.statements[0],
+            Statement::expression(Expression::Null)
+        );
+        assert_eq!(
+            program.statements[1],
+            Statement::r#let("x", Expression::Null)
+        );
+        assert_eq!(
+            program.statements[2],
+            Statement::expression(Expression::infix(
+                Expression::identifier("x"),
+                Expression::Null,
+                InfixOperator::Equal
+            ))
         );
     }
 

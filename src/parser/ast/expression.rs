@@ -32,6 +32,7 @@ pub enum Expression {
         operator: InfixOperator,
         rhs: Box<Expression>,
     },
+    Null,
 }
 
 impl Expression {
@@ -135,6 +136,7 @@ impl Display for Expression {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
+            Expression::Null => write!(f, "null"),
         }
     }
 }

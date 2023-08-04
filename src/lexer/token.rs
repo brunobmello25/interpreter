@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use super::location::Location;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub location: Location,
@@ -17,7 +17,7 @@ impl Token {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenType {
     Let,
     Identifier(String),
@@ -47,6 +47,7 @@ pub enum TokenType {
     Eq,
     NotEq,
     Modulo,
+    Null,
 }
 
 impl TokenType {
@@ -90,50 +91,7 @@ impl Display for TokenType {
             TokenType::Eq => write!(f, "=="),
             TokenType::NotEq => write!(f, "!="),
             TokenType::Modulo => write!(f, "%"),
-        }
-    }
-}
-
-impl Clone for TokenType {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Let => Self::Let,
-            Self::Identifier(arg0) => Self::Identifier(arg0.clone()),
-            Self::Assign => Self::Assign,
-            Self::Integer(arg0) => Self::Integer(arg0.clone()),
-            Self::Comma => Self::Comma,
-            Self::Function => Self::Function,
-            Self::LParen => Self::LParen,
-            Self::RParen => Self::RParen,
-            Self::LBrace => Self::LBrace,
-            Self::RBrace => Self::RBrace,
-            Self::Semicolon => Self::Semicolon,
-            Self::Illegal(arg0) => Self::Illegal(arg0.clone()),
-            Self::EOF => Self::EOF,
-            Self::Plus => Self::Plus,
-            Self::Minus => Self::Minus,
-            Self::Bang => Self::Bang,
-            Self::Asterisk => Self::Asterisk,
-            Self::Slash => Self::Slash,
-            Self::LT => Self::LT,
-            Self::GT => Self::GT,
-            Self::True => Self::True,
-            Self::False => Self::False,
-            Self::If => Self::If,
-            Self::Else => Self::Else,
-            Self::Return => Self::Return,
-            Self::Eq => Self::Eq,
-            Self::NotEq => Self::NotEq,
-            Self::Modulo => Self::Modulo,
-        }
-    }
-}
-
-impl Clone for Token {
-    fn clone(&self) -> Self {
-        Self {
-            token_type: self.token_type.clone(),
-            location: self.location.clone(),
+            TokenType::Null => write!(f, "null"),
         }
     }
 }
