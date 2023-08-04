@@ -4,6 +4,7 @@ use crate::parser::ast::{
     expression::Expression,
     node::Node,
     operator::{InfixOperator, PrefixOperator},
+    program::Program,
     statement::Statement,
 };
 
@@ -48,18 +49,14 @@ impl Evaluator {
         for statement in statements {
             let evaluated = self.eval(statement)?;
 
-            match evaluated {
-                Object::ReturnValue(_) => return Ok(evaluated),
-                _ => {}
+            if let Object::ReturnValue(_) = evaluated {
+                return Ok(evaluated);
             }
 
             result = Some(evaluated);
         }
 
-        match result {
-            Some(object) => Ok(object),
-            None => Err(EvaluationError::new("program did not have any statements")),
-        }
+        Ok(result.unwrap_or(Object::Null))
     }
 
     fn eval_statement(&self, statement: Statement) -> Result<Object, EvaluationError> {
@@ -113,7 +110,7 @@ impl Evaluator {
         match object {
             Object::Integer(integer) => integer != 0,
             Object::Boolean(boolean) => boolean,
-            x => todo!(),
+            _ => todo!(),
         }
     }
 
@@ -201,6 +198,8 @@ impl Evaluator {
 
 #[cfg(test)]
 mod tests {
+    use indoc::indoc;
+
     use crate::{
         evaluator::object::Object,
         lexer::lexer::Lexer,
@@ -242,6 +241,17 @@ mod tests {
             ("if (1 > 2) { 10 }", Object::Null),
             ("if (1 > 2) { 10 } else { 20 }", Object::Integer(20)),
             ("if (1 < 2) { 10 } else { 20 }", Object::Integer(10)),
+            (
+                indoc! {"
+                    if (10 > 1) {
+                        if (10 > 1) {
+                            return 10;
+                        }
+                        return 1;
+                    }
+                "},
+                Object::return_value(Object::Integer(10)),
+            ),
         ];
         for test in tests {
             let program = make_program_node(test.0);
@@ -253,7 +263,6 @@ mod tests {
     }
 
     #[test]
-    // #[ignore]
     fn test_bang_prefix_expression() {
         let tests = vec![
             ("!true", false),

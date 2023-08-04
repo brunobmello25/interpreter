@@ -19,6 +19,7 @@ use super::{
     precedence::Precedence,
 };
 
+#[derive(Debug)]
 pub struct ParserError {
     msg: String,
     location: Location,
@@ -132,7 +133,7 @@ impl<'a> Parser<'a> {
             TokenType::If => self.parse_if_expression(),
             TokenType::Function => self.parse_function_literal(),
             token_type => Err(ParserError::new(
-                format!("unexpected token {}", token_type),
+                format!("Expected prefix expression, got {:?}", token_type),
                 &self.current_token.location,
             )),
         }
@@ -345,6 +346,10 @@ impl<'a> Parser<'a> {
 
         let expression = self.parse_expression(Precedence::LOWEST)?;
 
+        if self.peeking_token.token_type == TokenType::Semicolon {
+            self.next_token();
+        }
+
         Ok(Statement::r#return(expression))
     }
 
@@ -368,6 +373,48 @@ mod tests {
     };
 
     use super::Parser;
+
+    #[test]
+    fn test_nested_if_parsing() {
+        let mut parser = make_parser(indoc! {"
+            if(x < y) {
+                if(x > y) {
+                    return x;
+                } else {
+                    return y;
+                }
+            } else {
+                return y;
+            }
+        "});
+        let program = parser.parse_program();
+
+        for error in &parser.errors {
+            println!("{}", error);
+        }
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::r#if(
+                Expression::infix(
+                    Expression::identifier("x"),
+                    Expression::identifier("y"),
+                    InfixOperator::LessThan
+                ),
+                vec![Statement::Expression(Expression::r#if(
+                    Expression::infix(
+                        Expression::identifier("x"),
+                        Expression::identifier("y"),
+                        InfixOperator::GreaterThan
+                    ),
+                    vec![Statement::r#return(Expression::identifier("x"))],
+                    Some(vec![Statement::r#return(Expression::identifier("y"))])
+                ))],
+                Some(vec![Statement::r#return(Expression::identifier("y")),])
+            ))
+        );
+    }
 
     #[test]
     fn test_call_expression_parsing() {

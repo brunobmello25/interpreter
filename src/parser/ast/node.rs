@@ -1,5 +1,6 @@
 use super::{expression::Expression, program::Program, statement::Statement};
 
+#[derive(Debug)]
 pub enum Node {
     Expression(Expression),
     Statement(Statement),
