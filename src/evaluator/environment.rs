@@ -1,8 +1,8 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
 use super::object::Object;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub struct Environment {
     store: HashMap<String, Object>,
     outer: Option<Rc<RefCell<Environment>>>,
@@ -35,6 +35,16 @@ impl Environment {
 
     pub fn set(&mut self, name: &str, val: Object) -> Option<Object> {
         self.store.insert(name.to_string(), val)
+    }
+}
+
+// custom debug implementation to avoid infinite recursion
+impl fmt::Debug for Environment {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Environment")
+            .field("store", &self.store)
+            .field("outer", &self.outer.is_some()) // Simply print whether outer is Some or None
+            .finish()
     }
 }
 

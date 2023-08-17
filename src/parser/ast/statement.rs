@@ -7,6 +7,7 @@ pub enum Statement {
     Let { name: String, value: Expression },
     Return { value: Expression },
     Expression(Expression),
+    Block(Vec<Statement>),
 }
 
 impl Statement {
@@ -32,6 +33,13 @@ impl Display for Statement {
             Statement::Let { name, value } => write!(f, "let {} = {}", name, value),
             Statement::Return { value } => write!(f, "return {}", value),
             Statement::Expression(expression) => write!(f, "{}", expression),
+            Statement::Block(statements) => {
+                let mut result = String::new();
+                for statement in statements {
+                    result.push_str(&format!("{}\n", statement));
+                }
+                write!(f, "{}", result)
+            }
         }
     }
 }

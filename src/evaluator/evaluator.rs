@@ -79,6 +79,7 @@ impl Evaluator {
                 Ok(Object::return_value(value))
             }
             Statement::Expression(expression) => self.eval(expression, environment),
+            Statement::Block(statements) => self.eval_statements(statements, environment),
         }
     }
 
@@ -134,7 +135,7 @@ impl Evaluator {
     ) -> Result<Object, EvaluationError> {
         let function = self.eval(function, Rc::clone(&environment))?;
 
-        let Object::Function { parameters, .. } = function else {
+        let Object::Function { parameters,environment, body } = function else {
             return Err(EvaluationError::new(format!("not a function: {}", function)));
         };
 
@@ -147,18 +148,19 @@ impl Evaluator {
         }
 
         let local_env = Environment::with_outer(Rc::clone(&environment));
-        // println!("outer: {:?}", environment.borrow());
-        // println!("local_env: {:?}", local_env.borrow());
 
-        // for (parameter, argument) in parameters.iter().zip(arguments) {
-        //     let argument = self.eval(argument, Rc::clone(&environment))?;
-        //
-        //     local_env.borrow_mut().set(parameter, argument);
-        // }
+        for (parameter, argument) in parameters.iter().zip(arguments) {
+            let argument = self.eval(argument, Rc::clone(&environment))?;
 
-        // println!("local_env: {:?}", local_env.borrow());
+            local_env.borrow_mut().set(parameter, argument);
+        }
 
-        todo!()
+        let body = match self.eval(Statement::Block(body), Rc::clone(&local_env))? {
+            Object::ReturnValue(value) => *value,
+            value => value,
+        };
+
+        Ok(body)
     }
 
     fn eval_function(
