@@ -388,7 +388,6 @@ mod tests {
             }
         "});
         let program = parser.parse_program();
-        println!("{:?}", parser.errors);
         assert_eq!(parser.errors.len(), 0);
         assert_eq!(program.statements.len(), 1);
         assert_eq!(
@@ -465,7 +464,6 @@ mod tests {
             }
         "});
         let program = parser.parse_program();
-        println!("{:?}", parser.errors);
         assert_eq!(parser.errors.len(), 0);
         assert_eq!(program.statements.len(), 1);
         let first_condition = Expression::infix(
@@ -536,7 +534,6 @@ mod tests {
             };
         "});
         let program = parser.parse_program();
-        println!("{:?}", program);
         assert_eq!(parser.errors.len(), 0);
         assert_eq!(program.statements.len(), 1);
         assert_eq!(
