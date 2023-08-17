@@ -112,7 +112,10 @@ impl Evaluator {
             Expression::Function { parameters, body } => {
                 self.eval_function(parameters, body, environment)
             }
-            Expression::Call { .. } => todo!(),
+            Expression::Call {
+                function,
+                arguments,
+            } => self.eval_call(*function, arguments, environment),
             Expression::Prefix { operator, rhs } => {
                 self.eval_prefix_expression(operator, *rhs, environment)
             }
@@ -121,6 +124,41 @@ impl Evaluator {
             }
             Expression::Null => Ok(Object::Null),
         }
+    }
+
+    fn eval_call(
+        &mut self,
+        function: Expression,
+        arguments: Vec<Expression>,
+        environment: Rc<RefCell<Environment>>,
+    ) -> Result<Object, EvaluationError> {
+        let function = self.eval(function, Rc::clone(&environment))?;
+
+        let Object::Function { parameters, .. } = function else {
+            return Err(EvaluationError::new(format!("not a function: {}", function)));
+        };
+
+        if parameters.len() != arguments.len() {
+            return Err(EvaluationError::new(format!(
+                "wrong number of arguments: got {}, but function wants {}",
+                arguments.len(),
+                parameters.len()
+            )));
+        }
+
+        let local_env = Environment::with_outer(Rc::clone(&environment));
+        // println!("outer: {:?}", environment.borrow());
+        // println!("local_env: {:?}", local_env.borrow());
+
+        // for (parameter, argument) in parameters.iter().zip(arguments) {
+        //     let argument = self.eval(argument, Rc::clone(&environment))?;
+        //
+        //     local_env.borrow_mut().set(parameter, argument);
+        // }
+
+        // println!("local_env: {:?}", local_env.borrow());
+
+        todo!()
     }
 
     fn eval_function(
@@ -135,32 +173,6 @@ impl Evaluator {
             environment: Environment::with_outer(Rc::clone(&environment)),
         })
     }
-
-    // fn eval_call(
-    //     &mut self,
-    //     function: Expression,
-    //     arguments: Vec<Expression>,
-    // ) -> Result<Object, EvaluationError> {
-    //     let function = self.eval(function)?;
-    //
-    //     let Object::Function { parameters, .. } = function else {
-    //         return Err(EvaluationError::new(format!("not a function: {}", function)));
-    //     };
-    //
-    //     if parameters.len() != arguments.len() {
-    //         return Err(EvaluationError::new(format!(
-    //             "wrong number of arguments: got {}, but function wants {}",
-    //             arguments.len(),
-    //             parameters.len()
-    //         )));
-    //     }
-    //
-    //     for (parameter, argument) in parameters.iter().zip(arguments) {
-    //         let argument = self.eval(argument)?;
-    //     }
-    //
-    //     todo!()
-    // }
 
     fn eval_if_expression(
         &mut self,
@@ -294,7 +306,7 @@ impl Evaluator {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, rc::Rc};
+    use std::rc::Rc;
 
     use indoc::indoc;
 
@@ -308,6 +320,22 @@ mod tests {
     };
 
     use super::{EvaluationError, Evaluator};
+
+    #[test]
+    fn test_apply_function() {
+        let tests = vec![
+            ("let identity = fn(x) { x; }; identity(5);", 5),
+            ("let identity = fn(x) { return x; }; identity(5);", 5),
+            ("let double = fn(x) { x * 2; }; double(5);", 10),
+            ("let add = fn(x, y) { x + y; }; add(5, 5);", 10),
+            ("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20),
+            ("fn(x) { x; }(5)", 5),
+        ];
+        for test in tests {
+            let evaluated = evaluate(test.0);
+            assert_eq!(evaluated.unwrap(), Object::Integer(test.1));
+        }
+    }
 
     #[test]
     fn test_function_object() {

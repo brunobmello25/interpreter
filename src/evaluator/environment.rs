@@ -24,10 +24,38 @@ impl Environment {
     }
 
     pub fn get(&self, name: &str) -> Option<Object> {
-        self.store.get(name).cloned()
+        match self.store.get(name) {
+            Some(val) => Some(val.clone()),
+            None => match &self.outer {
+                Some(outer) => outer.borrow().get(name),
+                None => None,
+            },
+        }
     }
 
     pub fn set(&mut self, name: &str, val: Object) -> Option<Object> {
         self.store.insert(name.to_string(), val)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_env() {
+        let env = Environment::new();
+        assert_eq!(env.borrow().get("a"), None);
+        assert_eq!(env.borrow_mut().set("a", Object::Integer(1)), None);
+        assert_eq!(env.borrow().get("a"), Some(Object::Integer(1)));
+    }
+
+    #[test]
+    fn test_env_outer() {
+        let env = Environment::new();
+        let env2 = Environment::with_outer(Rc::clone(&env));
+        assert_eq!(env2.borrow().get("a"), None);
+        assert_eq!(env.borrow_mut().set("a", Object::Integer(1)), None);
+        assert_eq!(env2.borrow().get("a"), Some(Object::Integer(1)));
     }
 }
