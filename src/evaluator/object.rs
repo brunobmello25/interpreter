@@ -30,7 +30,26 @@ impl Display for Object {
             Object::Boolean(value) => write!(f, "{}", value),
             Object::ReturnValue(value) => write!(f, "{}", *value),
             Object::Null => write!(f, "null"),
-            Object::Function { .. } => todo!(),
+            Object::Function {
+                body, parameters, ..
+            } => {
+                let mut result = String::new();
+                result.push_str("fn");
+                result.push('(');
+                for (i, parameter) in parameters.iter().enumerate() {
+                    result.push_str(&parameter);
+                    if i != parameters.len() - 1 {
+                        result.push_str(", ");
+                    }
+                }
+                result.push(')');
+                result.push_str(" {\n");
+                for statement in body {
+                    result.push_str(&format!("{}\n", statement));
+                }
+                result.push_str("}");
+                write!(f, "{}", result)
+            }
         }
     }
 }

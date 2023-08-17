@@ -23,7 +23,7 @@ impl EvaluationError {
 
 impl Display for EvaluationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", "evaluation error")
+        write!(f, "{}", self.msg)
     }
 }
 
@@ -324,6 +324,20 @@ mod tests {
     use super::{EvaluationError, Evaluator};
 
     #[test]
+    fn test_closures() {
+        let input = indoc! {"
+            let newAdder = fn(x) {
+                fn(y) { x + y };
+            };
+            let addTwo = newAdder(2);
+            addTwo(2);
+        "};
+        let evaluated = evaluate(input);
+        assert!(evaluated.is_ok());
+        assert_eq!(evaluated.unwrap(), Object::Integer(4));
+    }
+
+    #[test]
     fn test_apply_function() {
         let tests = vec![
             ("let identity = fn(x) { x; }; identity(5);", 5),
@@ -559,7 +573,7 @@ mod tests {
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
         let program = parser.parse_program();
-        let mut environment = Environment::new();
+        let environment = Environment::new();
         let mut evaluator = Evaluator::new();
         evaluator.eval(program, Rc::clone(&environment))
     }
