@@ -339,6 +339,10 @@ impl<'a> Parser<'a> {
 
         let expression = self.parse_expression(Precedence::LOWEST)?;
 
+        if self.peeking_token.token_type == TokenType::Semicolon {
+            self.next_token();
+        }
+
         Ok(Statement::r#let(identifier, expression))
     }
 
@@ -376,6 +380,189 @@ mod tests {
     use super::Parser;
 
     #[test]
+    fn test_if_with_multiple_statements() {
+        let mut parser = make_parser(indoc! {"
+            if (x < y) {
+                let z = x + 20;
+                return x + y;
+            }
+        "});
+        let program = parser.parse_program();
+        println!("{:?}", parser.errors);
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::r#if(
+                Expression::infix(
+                    Expression::identifier("x"),
+                    Expression::identifier("y"),
+                    InfixOperator::LessThan
+                ),
+                vec![
+                    Statement::r#let(
+                        "z",
+                        Expression::infix(
+                            Expression::identifier("x"),
+                            Expression::Int(20),
+                            InfixOperator::Add
+                        )
+                    ),
+                    Statement::r#return(Expression::infix(
+                        Expression::identifier("x"),
+                        Expression::identifier("y"),
+                        InfixOperator::Add
+                    ))
+                ],
+                None
+            ))
+        )
+    }
+
+    #[test]
+    fn test_multiple_statements() {
+        let mut parser = make_parser(indoc! {"
+            let z = x + 20;
+            return x + y;
+        "});
+        let program = parser.parse_program();
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 2);
+        assert_eq!(
+            program.statements[0],
+            Statement::r#let(
+                "z",
+                Expression::infix(
+                    Expression::identifier("x"),
+                    Expression::Int(20),
+                    InfixOperator::Add
+                )
+            )
+        );
+        assert_eq!(
+            program.statements[1],
+            Statement::r#return(Expression::infix(
+                Expression::identifier("x"),
+                Expression::identifier("y"),
+                InfixOperator::Add
+            ))
+        );
+    }
+
+    #[test]
+    fn test_complex_expressions_with_conditions() {
+        let mut parser = make_parser(indoc! {"
+            if (x < y) {
+                let z = x + 20;
+                return x + y;
+            } else {
+                if (x > y) {
+                    let z = x - y;
+                    return x - y;
+                } else {
+                    return x * y;
+                }
+            }
+        "});
+        let program = parser.parse_program();
+        println!("{:?}", parser.errors);
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+        let first_condition = Expression::infix(
+            Expression::identifier("x"),
+            Expression::identifier("y"),
+            InfixOperator::LessThan,
+        );
+        let first_let = Statement::r#let(
+            "z",
+            Expression::infix(
+                Expression::identifier("x"),
+                Expression::Int(20),
+                InfixOperator::Add,
+            ),
+        );
+        let first_return = Statement::r#return(Expression::infix(
+            Expression::identifier("x"),
+            Expression::identifier("y"),
+            InfixOperator::Add,
+        ));
+        let second_condition = Expression::infix(
+            Expression::identifier("x"),
+            Expression::identifier("y"),
+            InfixOperator::GreaterThan,
+        );
+        let second_let = Statement::r#let(
+            "z",
+            Expression::infix(
+                Expression::identifier("x"),
+                Expression::identifier("y"),
+                InfixOperator::Sub,
+            ),
+        );
+        let second_return = Statement::r#return(Expression::infix(
+            Expression::identifier("x"),
+            Expression::identifier("y"),
+            InfixOperator::Sub,
+        ));
+        let third_return = Statement::r#return(Expression::infix(
+            Expression::identifier("x"),
+            Expression::identifier("y"),
+            InfixOperator::Mult,
+        ));
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::r#if(
+                first_condition,
+                vec![first_let, first_return],
+                Some(vec![Statement::Expression(Expression::r#if(
+                    second_condition,
+                    vec![second_let, second_return],
+                    Some(vec![third_return])
+                ))])
+            ))
+        );
+    }
+
+    #[test]
+    fn test_fn_with_if_else() {
+        let mut parser = make_parser(indoc! {"
+            let counter = fn(x) {
+                if (x > 100) {
+                    return true;
+                } else {
+                    let foobar = 9999;
+                    foobar
+                }
+            };
+        "});
+        let program = parser.parse_program();
+        println!("{:?}", program);
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+        assert_eq!(
+            program.statements[0],
+            Statement::r#let(
+                "counter",
+                Expression::function(
+                    vec!["x"],
+                    vec![Statement::Expression(Expression::r#if(
+                        Expression::infix(
+                            Expression::identifier("x"),
+                            Expression::Int(100),
+                            InfixOperator::GreaterThan
+                        ),
+                        vec![Statement::r#return(Expression::Bool(true))],
+                        Some(vec![
+                            Statement::r#let("foobar", Expression::Int(9999)),
+                            Statement::Expression(Expression::identifier("foobar"))
+                        ])
+                    ))]
+                )
+            )
+        )
+    }
+
+    #[test]
     fn test_nested_if_parsing() {
         let mut parser = make_parser(indoc! {"
             if(x < y) {
@@ -390,9 +577,6 @@ mod tests {
         "});
         let program = parser.parse_program();
 
-        for error in &parser.errors {
-            println!("{}", error);
-        }
         assert_eq!(parser.errors.len(), 0);
         assert_eq!(program.statements.len(), 1);
         assert_eq!(
