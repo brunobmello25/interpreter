@@ -324,6 +324,24 @@ mod tests {
     use super::{EvaluationError, Evaluator};
 
     #[test]
+    fn test_recursion() {
+        let input = indoc! {"
+            let counter = fn(x) {
+                if (x > 3) {
+                    return true;
+                } else {
+                    counter(x + 1);
+                }
+            };
+            counter(2);
+        "};
+        let evaluated = evaluate(input);
+        println!("{:?}", evaluated);
+        assert!(evaluated.is_ok());
+        assert_eq!(evaluated.unwrap(), Object::Boolean(true));
+    }
+
+    #[test]
     fn test_closures() {
         let input = indoc! {"
             let newAdder = fn(x) {
