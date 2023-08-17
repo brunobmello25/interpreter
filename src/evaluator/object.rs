@@ -1,4 +1,8 @@
-use std::fmt::Display;
+use std::{cell::RefCell, fmt::Display, rc::Rc};
+
+use crate::parser::ast::statement::Statement;
+
+use super::environment::Environment;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Object {
@@ -6,6 +10,11 @@ pub enum Object {
     Boolean(bool),
     ReturnValue(Box<Object>),
     Null,
+    Function {
+        parameters: Vec<String>,
+        body: Vec<Statement>,
+        environment: Rc<RefCell<Environment>>,
+    },
 }
 
 impl Object {
@@ -21,6 +30,7 @@ impl Display for Object {
             Object::Boolean(value) => write!(f, "{}", value),
             Object::ReturnValue(value) => write!(f, "{}", *value),
             Object::Null => write!(f, "null"),
+            Object::Function { .. } => todo!(),
         }
     }
 }

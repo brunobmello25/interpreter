@@ -1,4 +1,8 @@
-use std::io::{self, Stdin, Write};
+use std::{
+    cell::RefCell,
+    io::{self, Stdin, Write},
+    rc::Rc,
+};
 
 use crate::{
     evaluator::{
@@ -50,10 +54,10 @@ impl Repl {
     }
 
     fn evaluate_program(&self, program: Program) -> Result<Object, EvaluationError> {
-        let mut environment = Environment::new();
-        let mut evaluator = Evaluator::new(&mut environment);
+        let environment = Environment::new();
+        let mut evaluator = Evaluator::new();
 
-        evaluator.eval(Node::Program(program))
+        evaluator.eval(Node::Program(program), Rc::clone(&environment))
     }
 
     #[allow(dead_code)]

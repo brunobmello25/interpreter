@@ -5,7 +5,7 @@ use super::{
     statement::Statement,
 };
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Expression {
     Int(i64),
     Bool(bool),
@@ -16,7 +16,7 @@ pub enum Expression {
         alternative: Option<Vec<Statement>>,
     },
     Function {
-        parameters: Vec<Expression>,
+        parameters: Vec<String>,
         body: Vec<Statement>,
     },
     Call {
@@ -40,8 +40,11 @@ impl Expression {
         Expression::Identifier(identifier.into())
     }
 
-    pub fn function(parameters: Vec<Expression>, body: Vec<Statement>) -> Self {
-        Expression::Function { parameters, body }
+    pub fn function(parameters: Vec<impl Into<String>>, body: Vec<Statement>) -> Self {
+        Expression::Function {
+            parameters: parameters.into_iter().map(|p| p.into()).collect(),
+            body,
+        }
     }
 
     pub fn prefix(rhs: Expression, operator: PrefixOperator) -> Self {
@@ -188,7 +191,7 @@ mod tests {
     #[test]
     fn test_function() {
         let function = Expression::Function {
-            parameters: vec![Expression::identifier("foo")],
+            parameters: vec!["foo".to_string()],
             body: vec![Statement::Expression(Expression::Int(1))],
         };
         assert_eq!(format!("{}", function), "fn(foo) { 1 }");

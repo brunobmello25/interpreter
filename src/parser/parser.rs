@@ -180,7 +180,7 @@ impl<'a> Parser<'a> {
         Ok(Expression::function(parameters, body))
     }
 
-    fn parse_function_params(&mut self) -> Result<Vec<Expression>, ParserError> {
+    fn parse_function_params(&mut self) -> Result<Vec<String>, ParserError> {
         let mut params = vec![];
 
         if self.peeking_token.token_type == TokenType::RParen {
@@ -191,7 +191,7 @@ impl<'a> Parser<'a> {
         self.next_token();
 
         while let TokenType::Identifier(identifier) = &self.current_token.token_type {
-            params.push(Expression::identifier(identifier));
+            params.push(identifier.clone());
 
             self.next_token();
             if let TokenType::Comma = self.current_token.token_type {
@@ -453,7 +453,7 @@ mod tests {
         assert_eq!(
             program.statements[0],
             Statement::Expression(Expression::function(
-                vec![Expression::identifier("x"), Expression::identifier("y")],
+                vec!["x", "y"],
                 vec![Statement::expression(Expression::infix(
                     Expression::identifier("x"),
                     Expression::identifier("y"),
