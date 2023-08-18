@@ -53,6 +53,20 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_multiple_nest_level() {
+        let env = Environment::new();
+        let env2 = Environment::with_outer(Rc::clone(&env));
+        let env3 = Environment::with_outer(Rc::clone(&env2));
+        assert_eq!(env3.borrow().get("a"), None);
+        assert_eq!(env2.borrow().get("a"), None);
+        assert_eq!(env.borrow().get("a"), None);
+        assert_eq!(env.borrow_mut().set("a", Object::Integer(1)), None);
+        assert_eq!(env3.borrow().get("a"), Some(Object::Integer(1)));
+        assert_eq!(env2.borrow().get("a"), Some(Object::Integer(1)));
+        assert_eq!(env.borrow().get("a"), Some(Object::Integer(1)));
+    }
+
+    #[test]
     fn test_env() {
         let env = Environment::new();
         assert_eq!(env.borrow().get("a"), None);
