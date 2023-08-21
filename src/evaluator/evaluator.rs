@@ -135,7 +135,7 @@ impl Evaluator {
     ) -> Result<Object, EvaluationError> {
         let function = self.eval(function, Rc::clone(&environment))?;
 
-        let Object::Function { parameters,environment, body } = function else {
+        let Object::Function { parameters, environment: func_environment, body } = function else {
             return Err(EvaluationError::new(format!("not a function: {}", function)));
         };
 
@@ -147,7 +147,7 @@ impl Evaluator {
             )));
         }
 
-        let local_env = Environment::with_outer(Rc::clone(&environment));
+        let local_env = Environment::with_outer(Rc::clone(&func_environment));
 
         for (parameter, argument) in parameters.iter().zip(arguments) {
             let argument = self.eval(argument, Rc::clone(&environment))?;
@@ -336,9 +336,39 @@ mod tests {
             counter(2);
         "};
         let evaluated = evaluate(input);
-        println!("{:?}", evaluated);
         assert!(evaluated.is_ok());
         assert_eq!(evaluated.unwrap(), Object::Boolean(true));
+    }
+
+    #[test]
+    fn test_deep_recursion_with_closures_and_global_variable() {
+        let input = indoc! {"
+        let global_var = 10;
+
+        let factorial = fn(x) {
+            if (x == 0) {
+                return 1;
+            } else {
+                return x * factorial(x - 1) * global_var;
+            }
+        };
+
+        let wrapper = fn(f, value) {
+            let global_var = 2;
+            return f(value);
+        };
+
+        let double_wrapper = fn(w, f, value) {
+            let global_var = 1;
+            return w(f, value);
+        };
+
+        double_wrapper(wrapper, factorial, 5);
+    "};
+
+        let evaluated = evaluate(input);
+        assert!(evaluated.is_ok());
+        assert_eq!(evaluated.unwrap(), Object::Integer(12_000_000));
     }
 
     #[test]
