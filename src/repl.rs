@@ -1,5 +1,4 @@
 use std::{
-    cell::RefCell,
     io::{self, Stdin, Write},
     rc::Rc,
 };

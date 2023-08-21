@@ -1,10 +1,14 @@
-use std::{cell::RefCell, fmt::Display, rc::Rc};
+use std::{
+    cell::RefCell,
+    fmt::{self, Display},
+    rc::Rc,
+};
 
 use crate::parser::ast::statement::Statement;
 
 use super::environment::Environment;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub enum Object {
     Integer(i64),
     Boolean(bool),
@@ -49,6 +53,26 @@ impl Display for Object {
                 }
                 result.push_str("}");
                 write!(f, "{}", result)
+            }
+        }
+    }
+}
+
+impl fmt::Debug for Object {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Object::Integer(value) => write!(f, "Integer({})", value),
+            Object::Boolean(value) => write!(f, "Boolean({})", value),
+            Object::ReturnValue(value) => write!(f, "ReturnValue({:?})", *value),
+            Object::Null => write!(f, "Null"),
+            Object::Function {
+                parameters, body, ..
+            } => {
+                write!(
+                    f,
+                    "Function {{ parameters: {:?}, body: {:?}, environment: ... }}",
+                    parameters, body
+                )
             }
         }
     }

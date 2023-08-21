@@ -38,13 +38,34 @@ impl Environment {
     }
 }
 
+impl Environment {
+    fn debug(&self, depth: usize, indent: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if depth == 0 {
+            write!(f, "...")
+        } else {
+            write!(f, "Environment {{\n")?;
+            write!(
+                f,
+                "{:indent$}store: {:?},\n",
+                "",
+                self.store,
+                indent = indent + 4
+            )?;
+            write!(f, "{:indent$}outer: ", "", indent = indent + 4)?;
+            if let Some(outer) = &self.outer {
+                outer.borrow().debug(depth - 1, indent + 4, f)?;
+            } else {
+                write!(f, "None")?;
+            }
+            write!(f, "\n{:indent$}}}", "", indent = indent)
+        }
+    }
+}
+
 // custom debug implementation to avoid infinite recursion
 impl fmt::Debug for Environment {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Environment")
-            .field("store", &self.store)
-            .field("outer", &self.outer.is_some()) // Simply print whether outer is Some or None
-            .finish()
+        self.debug(5, 0, f)
     }
 }
 
