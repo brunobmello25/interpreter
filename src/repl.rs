@@ -16,12 +16,14 @@ use crate::{
     },
 };
 
+#[allow(dead_code)]
 pub struct Repl {
     stdin: Stdin,
 }
 
 const PROMPT: &'static str = ">> ";
 
+#[allow(dead_code)]
 impl Repl {
     pub fn new(stdin: Stdin) -> Self {
         Repl { stdin }
