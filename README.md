@@ -32,6 +32,16 @@ To build the project:
 cargo build
 ```
 
+## Testing
+
+This project includes comprehensive unit tests for all major components. To run the tests:
+
+```bash
+cargo test
+```
+
+Each component (lexer, parser, evaluator) has its own test suite to ensure correct functionality.
+
 ## Running
 
 To run the REPL:
